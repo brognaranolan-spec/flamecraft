@@ -1847,8 +1847,8 @@ function renderOrderCard(o){
 // ═══ PAIEMENT (Stripe + Cloudflare Worker) ═══════════════════════════════════
 // Non configuré → checkout "démo" (commande enregistrée sans paiement réel).
 // Pour activer : renseigner les 2 constantes ci-dessous (voir payment/README.md).
-const STRIPE_PUBLISHABLE_KEY = '';  // pk_test_... (test) puis pk_live_...
-const PAYMENT_API_URL        = '';  // URL du Worker, ex : 'https://flamecraft-pay.xxx.workers.dev'
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51TiDfHAJMKcf8HgiE9XY9No7RdjwEq0hMEtFepmUgc5lowUHUslnaOfvfnIkhj9ZlFzRt7hAYkAtpCTOnRV8dpxV00JCpr279y';  // test (passer en pk_live_... pour la prod)
+const PAYMENT_API_URL        = 'https://flamecraft-pay.brognaranolan.workers.dev';  // Worker Cloudflare
 const PAY_PENDING_KEY = 'fc_pending_order_v1';
 
 var PAY = (function(){
