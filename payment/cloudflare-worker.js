@@ -5,14 +5,31 @@
  * ne doit JAMAIS être dans le navigateur). Renvoie le `clientSecret`
  * que le site utilise pour afficher carte / Apple Pay / Google Pay / PayPal.
  *
- * Variables d'environnement à définir dans Cloudflare (Settings > Variables) :
- *   - STRIPE_SECRET_KEY   (obligatoire, "Encrypt")  ex : sk_test_... puis sk_live_...
+ * SÉCURITÉ : le Worker NE FAIT PAS confiance au montant envoyé par le
+ * navigateur. Il **recalcule lui-même** le total à partir d'un catalogue
+ * de prix de référence (CATALOG ci-dessous) et des articles (type+id+qty).
+ * Impossible donc de payer moins que le vrai prix en bidouillant la requête.
+ *
+ * ⚠️ Garder CATALOG synchronisé avec les prix de index.html (COQUES / FIGS).
+ *
+ * Variables d'environnement (Cloudflare > Settings > Variables) :
+ *   - STRIPE_SECRET_KEY   (obligatoire, "Encrypt")  sk_test_... puis sk_live_...
  *   - ALLOWED_ORIGIN      (optionnel) ex : https://brognaranolan-spec.github.io
  *
  * Endpoint : POST /create-payment-intent
- *   body JSON : { amount: <centimes int>, currency: "eur", email, ref, items:[...] }
- *   réponse   : { clientSecret: "pi_..._secret_..." }
+ *   body JSON : { currency:"eur", email, ref, items:[{type,id,qty}, ...] }
+ *   réponse   : { clientSecret, amount }
  */
+
+// Prix de référence en CENTIMES — clé = "type:id" (type = "coque" ou "fig")
+const CATALOG = {
+  "coque:0": 1390, "coque:1": 1450, "coque:2": 1890,
+  "coque:3": 1390, "coque:4": 1550, "coque:5": 1990,
+  "fig:0": 3400, "fig:1": 2800, "fig:2": 2600, "fig:3": 3800
+};
+const FREE_SHIPPING_THRESHOLD = 5000; // 50,00 €
+const SHIPPING_FEE = 490;             // 4,90 €
+
 export default {
   async fetch(request, env) {
     const origin = env.ALLOWED_ORIGIN || "*";
@@ -23,11 +40,9 @@ export default {
       "Vary": "Origin"
     };
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
-
-    const url = new URL(request.url);
-    // petit health-check
     if (request.method === "GET") return json({ ok: true, service: "flamecraft-pay" }, 200, cors);
 
+    const url = new URL(request.url);
     if (request.method !== "POST" || !url.pathname.endsWith("/create-payment-intent")) {
       return json({ error: "Not found" }, 404, cors);
     }
@@ -38,22 +53,41 @@ export default {
     let body;
     try { body = await request.json(); } catch (e) { return json({ error: "JSON invalide" }, 400, cors); }
 
-    const amount = parseInt(body.amount, 10);
-    const currency = (body.currency || "eur").toLowerCase();
-    // garde-fous : entre 0,50 € et 5 000 €
-    if (!Number.isInteger(amount) || amount < 50 || amount > 500000) {
-      return json({ error: "Montant invalide" }, 400, cors);
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (items.length === 0) return json({ error: "Panier vide" }, 400, cors);
+
+    // ── Recalcul du total à partir du catalogue de référence ──
+    let subtotal = 0;
+    const summary = [];
+    for (const it of items) {
+      const key = String(it.type) + ":" + String(it.id);
+      const price = CATALOG[key];
+      if (price === undefined) {
+        return json({ error: "Article inconnu : " + key }, 400, cors);
+      }
+      let qty = parseInt(it.qty, 10);
+      if (!Number.isInteger(qty) || qty < 1) qty = 1;
+      if (qty > 99) qty = 99;
+      subtotal += price * qty;
+      summary.push(key + "x" + qty);
+    }
+    const shipping = (subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0) ? 0 : SHIPPING_FEE;
+    const amount = subtotal + shipping;
+
+    // garde-fou final
+    if (amount < 50 || amount > 500000) {
+      return json({ error: "Montant hors limites" }, 400, cors);
     }
 
+    const currency = (body.currency || "eur").toLowerCase();
     const form = new URLSearchParams();
     form.set("amount", String(amount));
     form.set("currency", currency);
     form.set("automatic_payment_methods[enabled]", "true");
     if (body.email) form.set("receipt_email", String(body.email).slice(0, 200));
     if (body.ref) form.set("metadata[ref]", String(body.ref).slice(0, 100));
-    if (body.items) {
-      try { form.set("metadata[items]", JSON.stringify(body.items).slice(0, 480)); } catch (e) {}
-    }
+    form.set("metadata[items]", summary.join(",").slice(0, 480));
+    form.set("metadata[computed_amount]", String(amount));
 
     const resp = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",
@@ -67,7 +101,7 @@ export default {
     if (!resp.ok) {
       return json({ error: (data.error && data.error.message) || "Erreur Stripe" }, 502, cors);
     }
-    return json({ clientSecret: data.client_secret }, 200, cors);
+    return json({ clientSecret: data.client_secret, amount: amount }, 200, cors);
   }
 };
 

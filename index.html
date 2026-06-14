@@ -1873,7 +1873,7 @@ var PAY = (function(){
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({amount:Math.round(order.total*100),currency:'eur',
         email:(FC.user()&&FC.user().email)||'',ref:order.id,
-        items:order.items.map(function(i){return {name:i.name,qty:i.qty,price:i.price};})})
+        items:order.items.map(function(i){return {type:i.type,id:i.id,qty:i.qty,name:i.name};})})
     }).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d;});})
     .then(function(d){if(!d.clientSecret)throw new Error('Réponse invalide du serveur de paiement');mountElements(d.clientSecret);})
     .catch(function(e){setMsg('Erreur : '+(e.message||e),true);busy(false);});
