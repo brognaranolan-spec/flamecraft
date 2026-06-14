@@ -1008,10 +1008,12 @@ function renderAll(){
   const dup=[...items,...items];
   document.getElementById('mqTrack').innerHTML=dup.map(t=>`<span class="marquee-item"><span class="mdot"></span>${t}</span>`).join('');
   // home grids
-  document.getElementById('home-coques').innerHTML=COQUES.slice(0,3).map(d=>renderCoque(d)).join('');
-  document.getElementById('home-figs').innerHTML=FIGS.map(renderFig).join('');
+  var liveCoques=COQUES.filter(function(d){return !d.archived;});
+  var liveFigs=FIGS.filter(function(d){return !d.archived;});
+  document.getElementById('home-coques').innerHTML=liveCoques.slice(0,3).map(d=>renderCoque(d)).join('');
+  document.getElementById('home-figs').innerHTML=liveFigs.map(renderFig).join('');
   // coques page
-  document.getElementById('coques-grid').innerHTML=COQUES.map(d=>renderCoque(d)).join('');
+  document.getElementById('coques-grid').innerHTML=liveCoques.map(d=>renderCoque(d)).join('');
   // filters
   const themes=['Tout','Dark kawaii','Tech','Dark fantasy','Cosmique','Synthwave','Alt'];
   document.getElementById('coques-filters').innerHTML=themes.map((t,i)=>`<button class="fchip ${i===0?'on':''}" onclick="filterCoques('${t}',this)">${t}</button>`).join('');
@@ -1020,7 +1022,7 @@ function renderAll(){
 }
 
 function renderFigsPage(){
-  const f=FIGS[0];
+  const f=FIGS.find(function(d){return !d.archived;})||FIGS[0];
   document.getElementById('fig-feature').innerHTML=`
     <div class="fig-feat-art">${mkFigSVG(0,f.theme)}</div>
     <div class="fig-feat-body">
@@ -1037,7 +1039,7 @@ function renderFigsPage(){
         <button class="btn-solid" onclick="addToCart('fig',${f.id})">Ajouter au panier</button>
       </div>
     </div>`;
-  document.getElementById('figs-grid').innerHTML=FIGS.map(renderFig).join('');
+  document.getElementById('figs-grid').innerHTML=FIGS.filter(function(d){return !d.archived;}).map(renderFig).join('');
 }
 
 // ═══ NAVIGATION ═══
@@ -1058,9 +1060,9 @@ function goto(page){
 function filterCoques(theme,el){
   document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-  const filtered=theme==='Tout'?COQUES:COQUES.filter(d=>d.cat.toLowerCase().includes(theme.toLowerCase())||theme==='Tout');
-  const show=theme==='Tout'?COQUES:COQUES.filter(d=>d.cat.includes(theme)||d.cat===theme);
-  document.getElementById('coques-grid').innerHTML=(theme==='Tout'?COQUES:show.length?show:COQUES).map(d=>renderCoque(d)).join('');
+  var base=COQUES.filter(function(d){return !d.archived;});
+  var show=theme==='Tout'?base:base.filter(function(d){return d.cat.includes(theme)||d.cat===theme;});
+  document.getElementById('coques-grid').innerHTML=(theme==='Tout'?base:(show.length?show:base)).map(d=>renderCoque(d)).join('');
 }
 
 // ═══ CART ═══
@@ -1074,7 +1076,7 @@ function addToCart(type,id,qty){
   const p=prodLookup(type,id); if(!p)return;
   const ex=cart.find(it=>it.type===type&&it.id===id);
   if(ex)ex.qty+=qty; else cart.push({type,id,qty});
-  updateCartBadge();persistCart();
+  updateCartBadge();persistCart();fcTrack('cart',{key:type+':'+id});
   const t={p:'pk',c:'cy',pu:'pu'}[p.theme]||'pk';
   showToast(p.name+(qty>1?' \u00d7'+qty:'')+' ajouté au panier',t);
   if(document.getElementById('page-cart').classList.contains('active'))renderCart();
@@ -1103,6 +1105,7 @@ function cartRemove(type,id){
   if(p)showToast(p.name+' retiré','pk');
 }
 function finalizeOrder(order){
+  fcTrack('purchase',{amount:Math.round((order.total||0)*100),keys:(order.items||[]).map(function(i){return i.type+':'+i.id;})});
   return Promise.resolve(FC.createOrder(order)).then(function(){
     cart=[];persistCart();updateCartBadge();renderCart();
     goto('account');
@@ -1186,6 +1189,7 @@ let pmCurrent=null, pmQty=1;
 function openProduct(type,id){
   const p=prodLookup(type,id); if(!p)return;
   pmCurrent={type,id};pmQty=1;
+  fcTrack('product',{key:type+':'+id});
   const tc=p.theme;
   const cls={p:'',c:'c',pu:'p'}[tc]||'';
   const accent={p:'var(--pink)',c:'var(--cyan)',pu:'var(--purple)'}[tc]||'var(--pink)';
@@ -1941,7 +1945,7 @@ var PAY = (function(){
       if(pi.status==='succeeded'||pi.status==='processing'){
         var pend=null;try{pend=JSON.parse(localStorage.getItem(PAY_PENDING_KEY));}catch(e){}
         try{localStorage.removeItem(PAY_PENDING_KEY);}catch(e){}
-        if(pend){pend.status='Payée';Promise.resolve(FC.createOrder(pend)).then(function(){cart=[];persistCart();updateCartBadge();showToast('Paiement réussi · commande '+pend.id,'cy');if(FC.user())goto('account');});}
+        if(pend){pend.status='Payée';fcTrack('purchase',{amount:Math.round((pend.total||0)*100),keys:(pend.items||[]).map(function(i){return i.type+':'+i.id;})});Promise.resolve(FC.createOrder(pend)).then(function(){cart=[];persistCart();updateCartBadge();showToast('Paiement réussi · commande '+pend.id,'cy');if(FC.user())goto('account');});}
       }else if(pi.status==='requires_payment_method'){
         showToast('Paiement non abouti, réessaie','pk');
       }
@@ -1950,6 +1954,51 @@ var PAY = (function(){
 
   return {enabled:enabled, open:open, pay:pay, close:close, checkReturn:checkReturn};
 })();
+
+// ═══ BACKEND DASHBOARD (config temps réel + analytics) ═══════════════════════
+// Réutilise PAYMENT_API_URL (même Worker Cloudflare). Non configuré → no-op.
+function fcApiBase(){return PAYMENT_API_URL?PAYMENT_API_URL.replace(/\/$/,''):'';}
+function fcTrack(event,extra){
+  var base=fcApiBase();if(!base)return;
+  try{
+    fetch(base+'/track',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(Object.assign({event:event},extra||{})),keepalive:true}).catch(function(){});
+  }catch(e){}
+}
+function fcSetTxt(id,v){if(v==null||v==='')return;var e=document.getElementById(id);if(e)e.textContent=v;}
+function fcApplyConfig(cfg){
+  if(!cfg)return;
+  if(cfg.products){
+    Object.keys(cfg.products).forEach(function(key){
+      var ov=cfg.products[key];if(!ov)return;
+      var parts=key.split(':'),type=parts[0],id=parseInt(parts[1],10);
+      var arr=type==='coque'?COQUES:(type==='fig'?FIGS:null);if(!arr)return;
+      var prod=arr.find(function(p){return p.id===id;});
+      if(prod){Object.assign(prod,ov);}
+      else{
+        var base=(type==='fig')
+          ?{id:id,name:'',cat:'',desc:'',price:'0',badge:'',theme:'pu',h:'',mat:'',stock:0,model:''}
+          :{id:id,name:'',cat:'',desc:'',price:'0',badge:'',theme:'p',compat:'',pat:0,model:''};
+        arr.push(Object.assign(base,ov,{id:id}));
+      }
+    });
+    ALL_PRODS=[].concat(COQUES,FIGS);
+  }
+  var c=cfg.content||{};
+  fcSetTxt('h-eye',c.eyebrow);fcSetTxt('h-l1',c.h1);fcSetTxt('h-l2',c.h2);fcSetTxt('h-l3',c.h3);
+  fcSetTxt('h-desc',c.desc);fcSetTxt('h-b1',c.btn1);fcSetTxt('h-b2',c.btn2);
+  if(c.siteName){var nm=document.querySelector('.nav-logo-main');if(nm)nm.textContent=c.siteName;document.querySelectorAll('.footer-logo').forEach(function(e){e.textContent=c.siteName;});}
+  if(c.siteSub){var sb=document.querySelector('.nav-logo-sub');if(sb)sb.textContent=c.siteSub;}
+  if(c.instagram||c.etsy){document.querySelectorAll('.footer-nav a').forEach(function(a){var t=a.textContent.toLowerCase();if(t.indexOf('instagram')>=0&&c.instagram){a.href=c.instagram;a.target='_blank';}if(t.indexOf('etsy')>=0&&c.etsy){a.href=c.etsy;a.target='_blank';}});}
+  renderAll();
+  if(isActive('figurines'))renderFigsPage();
+}
+function fcLoadConfig(){
+  var base=fcApiBase();if(!base)return;
+  fetch(base+'/config').then(function(r){return r.json();}).then(function(cfg){
+    if(cfg&&(cfg.products||cfg.content))fcApplyConfig(cfg);
+  }).catch(function(){});
+}
 
 // ═══ INIT ═══
 renderAll();
@@ -1961,6 +2010,8 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'&&document.getElementById('paymentModal').classList.contains('open'))PAY.close();
 });
 updateCartBadge();
+fcTrack('view');
+fcLoadConfig();
 
 // ── Adaptateur SUPABASE (activé automatiquement si les 2 constantes sont remplies) ──
 function fcBootstrap(){

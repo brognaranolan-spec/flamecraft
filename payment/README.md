@@ -1,52 +1,61 @@
-# Paiement FLAMECRAFT — mise en service (Stripe + Cloudflare Worker)
+# FLAMECRAFT — Worker Cloudflare : paiement + dashboard
 
-Le site est statique (GitHub Pages). Pour encaisser des paiements (carte, Apple Pay,
-Google Pay, PayPal) en toute sécurité, **une seule petite fonction serveur** est
-nécessaire : un *Cloudflare Worker* qui détient la clé secrète Stripe et crée le
-paiement. Le navigateur ne voit jamais la clé secrète.
+Le site est statique (GitHub Pages). Un **seul Worker Cloudflare** (`flamecraft-pay`)
+sert à la fois :
+1. le **paiement** Stripe (création sécurisée du PaymentIntent, prix recalculé serveur) ;
+2. le **backend du dashboard** : config produits/contenu en temps réel, modèles 3D,
+   analytics (vues/achats), commandes — le tout stocké dans un **KV namespace**.
 
-## 1. Compte Stripe (gratuit)
-1. Crée un compte sur https://stripe.com (reste en **mode Test** pour commencer).
-2. Dashboard → **Developers → API keys** : note
-   - **Publishable key** (`pk_test_…`) → ira dans le site.
-   - **Secret key** (`sk_test_…`) → ira dans le Worker (jamais dans le site).
-3. Dashboard → **Settings → Payment methods** : active **Carte**, **Apple Pay**,
-   **Google Pay**, **Link**, **PayPal** (PayPal nécessite parfois une activation séparée).
+## Variables / bindings à configurer (Cloudflare → Worker → Settings)
+| Nom | Type | Rôle |
+|-----|------|------|
+| `STRIPE_SECRET_KEY` | Secret | `sk_test_…` puis `sk_live_…` — paiement *(déjà fait)* |
+| `ADMIN_TOKEN` | Secret | mot de passe du dashboard (à inventer, ex. long aléatoire) |
+| `KV` | **KV Namespace binding** | stockage config + modèles 3D + analytics |
+| `ALLOWED_ORIGIN` | (option) | ex. `https://brognaranolan-spec.github.io` pour restreindre |
 
-## 2. Déployer le Worker Cloudflare (sans rien installer)
-1. Crée un compte sur https://dash.cloudflare.com (gratuit).
-2. **Workers & Pages → Create application → Create Worker** → donne-lui un nom
-   (ex. `flamecraft-pay`) → **Deploy**.
-3. **Edit code** : remplace tout par le contenu de [`cloudflare-worker.js`](./cloudflare-worker.js) → **Deploy**.
-4. **Settings → Variables and Secrets → Add** :
-   - `STRIPE_SECRET_KEY` = ta clé secrète Stripe (`sk_test_…`), type **Secret/Encrypt**.
-   - (optionnel) `ALLOWED_ORIGIN` = `https://brognaranolan-spec.github.io`
-     pour n'autoriser que ton site.
-5. Note l'URL publique du Worker : `https://flamecraft-pay.<ton-sous-domaine>.workers.dev`.
-   Teste-la dans le navigateur : elle doit répondre `{"ok":true,...}`.
+### Créer le KV et le lier (≈ 3 min)
+1. Cloudflare → **Storage & Databases → KV → Create namespace** → nom : `flamecraft` → Create.
+2. Worker `flamecraft-pay` → **Settings → Bindings → Add → KV namespace** :
+   - Variable name : **`KV`** (exactement)
+   - KV namespace : `flamecraft`
+   - Save.
+3. Worker → **Settings → Variables and Secrets → Add** : `ADMIN_TOKEN` = ton mot de passe (Secret).
+4. Re-déploie le Worker avec le code à jour : ouvre `cloudflare-worker.js`, copie tout,
+   colle dans **Edit code** du Worker → **Deploy**.
+5. Vérifie : ouvre `https://flamecraft-pay.brognaranolan.workers.dev/` →
+   `{"ok":true,"service":"flamecraft-pay","kv":true,"admin":true}` (kv et admin à `true`).
 
-## 3. Brancher le site
-Dans `index.html`, en haut du bloc « PAIEMENT », renseigne :
-```js
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_xxxxxxxx';                 // clé publique Stripe
-const PAYMENT_API_URL        = 'https://flamecraft-pay.xxx.workers.dev';  // URL du Worker
-```
-Commit + push → le checkout bascule sur le vrai paiement.
+## Le dashboard
+- URL : **`https://brognaranolan-spec.github.io/flamecraft/admin.html`** (non listée, `noindex`).
+- Connexion : le **token admin** (`ADMIN_TOKEN`).
+- **Partager l'accès** : donne l'URL + le token à la personne. Pour révoquer : change `ADMIN_TOKEN`.
+- Sections : Vue d'ensemble (KPIs + graphe), Produits (prix/stock/desc/badges/archive/ajout),
+  Studio 3D (import STL/OBJ + aperçu), Contenu (hero/textes/liens), Commandes (Stripe), Analytics, Réglages.
+- Les modifs sont un **brouillon** → bouton **« Publier »** = visible par tous les visiteurs
+  (le site lit la config du Worker à chaque chargement, ~temps réel).
 
-## 4. Apple Pay (vérification du domaine)
-Apple Pay sur le web exige de prouver que tu possèdes le domaine :
-1. Stripe Dashboard → **Settings → Payment methods → Apple Pay → Add domain** :
-   `brognaranolan-spec.github.io`.
-2. Stripe te donne un fichier `apple-developer-merchantid-domain-association`.
-   Place-le dans le dépôt sous `.well-known/apple-developer-merchantid-domain-association`
-   (le fichier `.nojekyll` à la racine est déjà là pour que GitHub Pages serve `.well-known`).
-3. Re-déploie. Google Pay ne demande pas cette étape.
+## Endpoints du Worker
+| Méthode | Chemin | Accès |
+|--------|--------|-------|
+| GET | `/` | public (health) |
+| GET | `/config` | public (config publiée) |
+| POST | `/create-payment-intent` | public (paiement) |
+| POST | `/track` | public (analytics) |
+| GET | `/model/:key` | public (fichier 3D) |
+| POST | `/admin/config` | token |
+| GET | `/admin/stats` | token |
+| GET | `/admin/orders` | token (lit Stripe) |
+| POST/DELETE | `/admin/model/:key` | token |
 
-## 5. Passer en production (vrai argent)
-Quand tout est validé en test : repasse Stripe en **mode Live**, remplace les clés
-`pk_test_…`/`sk_test_…` par les `pk_live_…`/`sk_live_…` (site + Worker), redéploie.
+## Sécurité
+- Le prix payé est **toujours recalculé côté Worker** (catalogue `DEFAULT_CATALOG` +
+  prix publiés dans le KV) → impossible de payer moins en trafiquant la requête.
+- Les écritures (config, modèles) exigent `ADMIN_TOKEN`. Les lectures publiques (`/config`)
+  n'exposent que ce qui est déjà affiché sur le site.
+- Pense à garder `ADMIN_TOKEN` long et privé. `ALLOWED_ORIGIN` peut restreindre le CORS.
 
-## Sécurité — à renforcer pour la prod
-Le Worker fait confiance au montant envoyé par le navigateur (garde-fou 0,50 €–5 000 €).
-Pour empêcher toute manipulation du prix, recalcule le total côté Worker à partir d'un
-catalogue de prix (codé dans le Worker ou lu depuis Supabase). À faire avant gros volume.
+## Passer le paiement en production (vrai argent)
+Stripe en mode **Live** → remplace `pk_test`/`sk_test` par `pk_live`/`sk_live`
+(site `index.html` + variable Cloudflare), redéploie. Pour Apple Pay : enregistrer le
+domaine dans Stripe + déposer le fichier `.well-known/apple-developer-merchantid-domain-association`.
