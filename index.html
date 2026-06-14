@@ -6,6 +6,7 @@
 <title>FLAMECRAFT — Coques & Figurines 3D</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://js.stripe.com/v3/"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -452,6 +453,18 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .ord-foot{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.2rem;border-top:1px solid var(--b1);background:var(--bg2)}
 .ord-foot span{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--fg3)}
 .ord-total{color:var(--fg)!important;font-size:.8rem!important}
+/* ═══ PAIEMENT (Stripe) ═══ */
+#paymentModal{position:fixed;inset:0;z-index:420;display:none;align-items:center;justify-content:center;background:rgba(4,3,12,.86);backdrop-filter:blur(7px);padding:1.2rem}
+#paymentModal.open{display:flex;animation:fadein .2s ease}
+.pay-card{position:relative;width:100%;max-width:440px;background:var(--bg2);border:1px solid var(--b1);border-radius:10px;padding:1.8rem 1.7rem 1.4rem;box-shadow:0 30px 80px rgba(0,0,0,.6);max-height:92vh;overflow-y:auto}
+.pay-sum{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--fg2);margin-bottom:1.1rem}
+.pay-amount{color:var(--cyan2);font-size:.85rem}
+.pay-sep{display:flex;align-items:center;gap:10px;margin:1rem 0 .9rem;color:var(--fg3);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.18em;text-transform:uppercase}
+.pay-sep::before,.pay-sep::after{content:'';flex:1;height:1px;background:var(--b2)}
+.pay-msg{min-height:1.1rem;font-family:'DM Mono',monospace;font-size:.62rem;color:var(--fg3);margin:.5rem 0 .2rem}
+.pay-spin{display:none;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+#pay-mode-note{color:var(--pink2)}
 </style>
 </head>
 <body>
@@ -786,6 +799,22 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
   </div>
 </div>
 
+<!-- PAYMENT MODAL -->
+<div id="paymentModal" onclick="if(event.target===this)PAY.close()">
+  <div class="pay-card">
+    <button class="auth-x" onclick="PAY.close()" aria-label="Fermer">&#x2715;</button>
+    <div class="auth-brand">FLAMECRAFT</div>
+    <div class="auth-title" style="margin:.15rem 0 .35rem">Paiement</div>
+    <div class="pay-sum"><span id="pay-count">0</span> article(s) · <span class="pay-amount" id="pay-amount">€0.00</span></div>
+    <div id="express-checkout"></div>
+    <div class="pay-sep" id="pay-sep"><span>ou payer par carte</span></div>
+    <div id="payment-element"></div>
+    <div class="pay-msg" id="pay-msg"></div>
+    <button class="auth-submit" id="pay-btn" onclick="PAY.pay()"><span class="pay-spin" id="pay-spin"></span><span id="pay-btn-label">Payer</span></button>
+    <div class="auth-note">Paiement sécurisé par Stripe · carte, Apple&nbsp;Pay, Google&nbsp;Pay, PayPal. <span id="pay-mode-note"></span></div>
+  </div>
+</div>
+
 <!-- AUTH MODAL -->
 <div id="authModal" onclick="if(event.target===this)closeAuth()">
   <div class="auth-card">
@@ -1073,6 +1102,12 @@ function cartRemove(type,id){
   updateCartBadge();persistCart();renderCart();
   if(p)showToast(p.name+' retiré','pk');
 }
+function finalizeOrder(order){
+  return Promise.resolve(FC.createOrder(order)).then(function(){
+    cart=[];persistCart();updateCartBadge();renderCart();
+    goto('account');
+  });
+}
 function cartCheckout(){
   if(!cart.length){showToast('Ton panier est vide','pk');return;}
   if(!FC.user()){showToast('Connecte-toi pour finaliser ta commande','pu');openAuth('login');return;}
@@ -1084,11 +1119,9 @@ function cartCheckout(){
     items:cart.map(function(it){var p=prodLookup(it.type,it.id);return{type:it.type,id:it.id,name:p?p.name:'Produit',price:p?parseFloat(p.price):0,qty:it.qty,theme:p?p.theme:'p'};}),
     subtotal:subt,shipping:ship,total:subt+ship,status:'En préparation'
   };
-  Promise.resolve(FC.createOrder(order)).then(function(){
-    cart=[];persistCart();updateCartBadge();renderCart();
-    showToast('Commande '+order.id+' validée — merci !','cy');
-    goto('account');
-  });
+  if(typeof PAY!=='undefined'&&PAY.enabled()){PAY.open(order);return;}
+  // Repli : paiement non configuré → on enregistre la commande (mode démo)
+  finalizeOrder(order).then(function(){showToast('Commande '+order.id+' enregistrée (paiement non configuré)','cy');});
 }
 
 function cartArtHTML(p,type){
@@ -1811,6 +1844,113 @@ function renderOrderCard(o){
     '<span class="ord-total">Total €'+(o.total||0).toFixed(2)+'</span></div></div>';
 }
 
+// ═══ PAIEMENT (Stripe + Cloudflare Worker) ═══════════════════════════════════
+// Non configuré → checkout "démo" (commande enregistrée sans paiement réel).
+// Pour activer : renseigner les 2 constantes ci-dessous (voir payment/README.md).
+const STRIPE_PUBLISHABLE_KEY = '';  // pk_test_... (test) puis pk_live_...
+const PAYMENT_API_URL        = '';  // URL du Worker, ex : 'https://flamecraft-pay.xxx.workers.dev'
+const PAY_PENDING_KEY = 'fc_pending_order_v1';
+
+var PAY = (function(){
+  var stripe=null, elements=null, currentOrder=null;
+  function enabled(){return !!(STRIPE_PUBLISHABLE_KEY && PAYMENT_API_URL && window.Stripe);}
+  function getStripe(){if(!stripe && window.Stripe && STRIPE_PUBLISHABLE_KEY)stripe=Stripe(STRIPE_PUBLISHABLE_KEY);return stripe;}
+  function el(id){return document.getElementById(id);}
+  function setMsg(t,err){var e=el('pay-msg');if(e){e.textContent=t||'';e.style.color=err?'var(--pink2)':'var(--fg3)';}}
+  function busy(b){var btn=el('pay-btn');if(btn)btn.disabled=b;var s=el('pay-spin');if(s)s.style.display=b?'inline-block':'none';}
+  function returnUrl(){try{localStorage.setItem(PAY_PENDING_KEY,JSON.stringify(currentOrder));}catch(e){}return location.origin+location.pathname;}
+
+  function open(order){
+    if(!enabled())return;
+    currentOrder=order;
+    el('pay-count').textContent=order.items.reduce(function(s,i){return s+i.qty;},0);
+    el('pay-amount').textContent='€'+order.total.toFixed(2);
+    el('pay-btn-label').textContent='Payer €'+order.total.toFixed(2);
+    el('pay-mode-note').textContent=/^pk_test/.test(STRIPE_PUBLISHABLE_KEY)?'(mode test — aucun débit réel)':'';
+    el('paymentModal').classList.add('open');
+    setMsg('Initialisation du paiement…');busy(true);
+    fetch(PAYMENT_API_URL.replace(/\/$/,'')+'/create-payment-intent',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({amount:Math.round(order.total*100),currency:'eur',
+        email:(FC.user()&&FC.user().email)||'',ref:order.id,
+        items:order.items.map(function(i){return {name:i.name,qty:i.qty,price:i.price};})})
+    }).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d;});})
+    .then(function(d){if(!d.clientSecret)throw new Error('Réponse invalide du serveur de paiement');mountElements(d.clientSecret);})
+    .catch(function(e){setMsg('Erreur : '+(e.message||e),true);busy(false);});
+  }
+
+  function mountElements(clientSecret){
+    var s=getStripe();
+    var appearance={theme:'night',variables:{colorPrimary:'#ff2060',colorBackground:'#0d0920',colorText:'#e8deff',colorDanger:'#ff5080',borderRadius:'4px',fontFamily:'Outfit, sans-serif'}};
+    elements=s.elements({clientSecret:clientSecret,appearance:appearance});
+    // Boutons portefeuilles (Apple Pay / Google Pay / Link / PayPal)
+    try{
+      var ece=elements.create('expressCheckout');
+      ece.on('ready',function(ev){
+        var avail=ev&&ev.availablePaymentMethods;
+        if(!avail||Object.keys(avail).length===0){el('express-checkout').style.display='none';el('pay-sep').style.display='none';}
+      });
+      ece.on('confirm',function(){
+        busy(true);setMsg('Validation du paiement…');
+        s.confirmPayment({elements:elements,clientSecret:clientSecret,confirmParams:{return_url:returnUrl()},redirect:'if_required'}).then(handleResult);
+      });
+      ece.mount('#express-checkout');
+    }catch(e){el('express-checkout').style.display='none';el('pay-sep').style.display='none';}
+    // Carte + autres moyens
+    var pe=elements.create('payment',{layout:'tabs'});
+    pe.on('ready',function(){setMsg('');busy(false);});
+    pe.mount('#payment-element');
+  }
+
+  function pay(){
+    if(!elements)return;
+    busy(true);setMsg('Traitement…');
+    getStripe().confirmPayment({elements:elements,confirmParams:{return_url:returnUrl()},redirect:'if_required'}).then(handleResult);
+  }
+
+  function handleResult(res){
+    if(res&&res.error){setMsg(res.error.message||'Paiement refusé.',true);busy(false);return;}
+    var pi=res&&res.paymentIntent;
+    if(pi&&(pi.status==='succeeded'||pi.status==='processing'))success();
+    else{setMsg('Statut du paiement : '+((pi&&pi.status)||'inconnu'),true);busy(false);}
+  }
+
+  function success(){
+    var order=currentOrder;
+    try{localStorage.removeItem(PAY_PENDING_KEY);}catch(e){}
+    close();
+    if(order){order.status='Payée';finalizeOrder(order).then(function(){showToast('Paiement réussi · commande '+order.id,'cy');});}
+  }
+
+  function close(){
+    el('paymentModal').classList.remove('open');
+    elements=null;currentOrder=null;
+    el('express-checkout').innerHTML='';el('express-checkout').style.display='';
+    el('payment-element').innerHTML='';el('pay-sep').style.display='';
+    setMsg('');busy(false);
+  }
+
+  function checkReturn(){
+    if(!enabled())return;
+    var cs=new URLSearchParams(location.search).get('payment_intent_client_secret');
+    if(!cs)return;
+    getStripe().retrievePaymentIntent(cs).then(function(r){
+      var pi=r&&r.paymentIntent;
+      history.replaceState({},'',location.origin+location.pathname);
+      if(!pi)return;
+      if(pi.status==='succeeded'||pi.status==='processing'){
+        var pend=null;try{pend=JSON.parse(localStorage.getItem(PAY_PENDING_KEY));}catch(e){}
+        try{localStorage.removeItem(PAY_PENDING_KEY);}catch(e){}
+        if(pend){pend.status='Payée';Promise.resolve(FC.createOrder(pend)).then(function(){cart=[];persistCart();updateCartBadge();showToast('Paiement réussi · commande '+pend.id,'cy');if(FC.user())goto('account');});}
+      }else if(pi.status==='requires_payment_method'){
+        showToast('Paiement non abouti, réessaie','pk');
+      }
+    }).catch(function(){});
+  }
+
+  return {enabled:enabled, open:open, pay:pay, close:close, checkReturn:checkReturn};
+})();
+
 // ═══ INIT ═══
 renderAll();
 goto('home');
@@ -1818,6 +1958,7 @@ document.getElementById('btnCart').onclick=function(){goto('cart');};
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'&&document.getElementById('prodModal').classList.contains('open'))closeProduct();
   if(e.key==='Escape'&&document.getElementById('authModal').classList.contains('open'))closeAuth();
+  if(e.key==='Escape'&&document.getElementById('paymentModal').classList.contains('open'))PAY.close();
 });
 updateCartBadge();
 
@@ -1837,10 +1978,10 @@ function fcBootstrap(){
         createOrder:function(id,order){return sb.from('orders').insert({user_id:id,ref:order.id,data:order}).then(function(r){if(r.error)throw r.error;});},
         loadOrders:function(id){return sb.from('orders').select('data').eq('user_id',id).order('created_at',{ascending:false}).then(function(r){return (r.data||[]).map(function(x){return x.data;});});}
       };
-      FC.init();
-    }).catch(function(e){console.warn('Supabase indisponible → repli local',e);FC.init();});
+      FC.init().then(function(){PAY.checkReturn();});
+    }).catch(function(e){console.warn('Supabase indisponible → repli local',e);FC.init().then(function(){PAY.checkReturn();});});
   } else {
-    FC.init();
+    FC.init().then(function(){PAY.checkReturn();});
   }
 }
 fcBootstrap();
