@@ -25,7 +25,7 @@ input,textarea,select{font-family:inherit}
 
 /* NAV */
 #nav{position:fixed;top:0;left:0;right:0;z-index:300;height:58px;display:flex;align-items:center;padding:0 2rem;gap:2rem;background:rgba(8,6,20,0.94);backdrop-filter:blur(18px);border-bottom:1px solid var(--b1);transition:padding-right 0.28s}
-#nav.editor-open{padding-right:calc(2rem + 320px)}
+
 .nav-logo{display:flex;flex-direction:column;cursor:pointer;gap:0;flex-shrink:0;text-decoration:none}
 .nav-logo-main{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;letter-spacing:0.1em;color:var(--pink);line-height:1}
 .nav-logo-sub{font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.38em;text-transform:uppercase;color:var(--fg3)}
@@ -33,14 +33,14 @@ input,textarea,select{font-family:inherit}
 .nav-links a{font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg3);padding:0 1.1rem;height:58px;display:flex;align-items:center;border-bottom:2px solid transparent;transition:color .18s,border-color .18s}
 .nav-links a:hover,.nav-links a.active{color:var(--fg);border-bottom-color:var(--pink)}
 .nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.btn-edit-toggle{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;background:transparent;border:1px solid var(--purpleA);color:var(--purple2);padding:6px 13px;border-radius:3px;transition:all .18s}
-.btn-edit-toggle:hover,.btn-edit-toggle.on{background:var(--purpleA);border-color:var(--purple2)}
+
+
 .btn-cart-nav{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;background:var(--pink);color:#fff;border:none;padding:6px 15px;border-radius:3px;transition:background .18s}
 .btn-cart-nav:hover{background:var(--pink2)}
 
 /* MAIN */
 #main{padding-top:58px;min-height:100vh;transition:padding-right .28s}
-#main.editor-open{padding-right:320px}
+
 .page{display:none;animation:fadein .22s ease}
 .page.active{display:block}
 @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -199,61 +199,7 @@ footer{border-top:1px solid var(--b2);padding:1.8rem 3rem;display:flex;align-ite
 .toast.cy{background:var(--bg3);border:1px solid var(--cyan);color:var(--cyan)}
 .toast.pu{background:var(--bg3);border:1px solid var(--purple2);color:var(--purple2)}
 
-/* ═══ EDITOR PANEL ═══ */
-#editor{position:fixed;top:58px;right:0;bottom:0;width:320px;z-index:250;background:rgba(10,7,24,.97);border-left:1px solid rgba(160,64,232,.22);backdrop-filter:blur(16px);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
-#editor.open{transform:translateX(0)}
-.ed-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid rgba(160,64,232,.14);flex-shrink:0}
-.ed-ttl{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.38em;text-transform:uppercase;color:var(--purple2)}
-.ed-close-btn{background:transparent;border:1px solid rgba(160,64,232,.2);color:var(--fg3);padding:3px 9px;border-radius:2px;font-size:.75rem;transition:all .18s}
-.ed-close-btn:hover{border-color:var(--purple2);color:var(--purple2)}
-.ed-tabs{display:flex;border-bottom:1px solid rgba(160,64,232,.1);flex-shrink:0}
-.ed-tab{flex:1;font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:none;color:var(--fg3);padding:9px 4px;border-bottom:2px solid transparent;transition:all .18s}
-.ed-tab:hover{color:var(--fg2)}
-.ed-tab.on{color:var(--purple2);border-bottom-color:var(--purple2)}
-.ed-body{flex:1;overflow-y:auto;padding:14px}
-.ed-body::-webkit-scrollbar{width:3px}
-.ed-body::-webkit-scrollbar-thumb{background:rgba(160,64,232,.3)}
-.ed-panel{display:none;flex-direction:column;gap:13px}
-.ed-panel.on{display:flex}
-.ed-group{display:flex;flex-direction:column;gap:7px}
-.ed-gtitle{font-family:'DM Mono',monospace;font-size:.53rem;letter-spacing:.4em;text-transform:uppercase;color:var(--purple);padding-bottom:5px;border-bottom:1px solid rgba(160,64,232,.1)}
-.ed-lbl{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.07em;color:var(--fg3);margin-bottom:1px}
-.ed-inp{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(160,64,232,.18);color:var(--fg);padding:6px 9px;font-size:.8rem;border-radius:3px;outline:none;transition:border-color .18s}
-.ed-inp:focus{border-color:rgba(160,64,232,.5)}
-.ed-ta{resize:vertical;min-height:58px;font-size:.78rem}
-.ed-sel{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(160,64,232,.18);color:var(--fg);padding:6px 9px;font-size:.78rem;border-radius:3px;outline:none}
-.ed-sel option{background:#0d0920;color:var(--fg)}
-.ed-crow{display:flex;align-items:center;gap:8px}
-.ed-crow label{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--fg3);flex:1}
-.ed-cinput{width:34px;height:26px;border:1px solid rgba(160,64,232,.28);border-radius:3px;padding:1px;background:transparent;cursor:pointer}
-.ed-upload{border:1px dashed rgba(0,216,200,.28);border-radius:4px;padding:12px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(0,216,200,.02)}
-.ed-upload:hover{border-color:var(--cyan);background:var(--cyanA)}
-.ed-upload p{font-size:.77rem;color:var(--fg2);margin-bottom:3px}
-.ed-upload span{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--fg3)}
-.filein{display:none}
-.ed-pnav{display:flex;align-items:center;justify-content:space-between;background:rgba(160,64,232,.05);padding:7px 10px;border-radius:3px;border:1px solid rgba(160,64,232,.1)}
-.ed-pname{font-family:'DM Mono',monospace;font-size:.67rem;color:var(--purple2);flex:1;text-align:center}
-.ed-parr{background:transparent;border:1px solid rgba(160,64,232,.22);color:var(--fg3);padding:2px 9px;border-radius:2px;font-size:.72rem;transition:all .15s}
-.ed-parr:hover{border-color:var(--purple2);color:var(--purple2)}
-.ed-trow{display:flex;align-items:center;justify-content:space-between}
-.ed-toggle{position:relative;width:34px;height:18px;background:rgba(255,255,255,.07);border-radius:9px;border:none;transition:background .2s;flex-shrink:0}
-.ed-toggle.on{background:rgba(160,64,232,.5)}
-.ed-toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s}
-.ed-toggle.on::after{transform:translateX(16px)}
-.ed-fbtn{width:100%;font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:transparent;border:1px solid rgba(160,64,232,.28);color:var(--purple2);padding:8px;border-radius:3px;transition:all .18s}
-.ed-fbtn:hover{background:var(--purpleA);border-color:var(--purple2)}
-.ed-fbtn.pk{border-color:rgba(255,32,96,.28);color:var(--pink)}
-.ed-fbtn.pk:hover{background:var(--pinkA);border-color:var(--pink)}
-.ed-preset{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.04);border:1px solid rgba(160,64,232,.2);color:var(--fg2);padding:7px 4px;border-radius:3px;cursor:pointer;transition:all .15s}
-.ed-preset:hover{border-color:rgba(192,128,255,.5);color:var(--fg)}
-.ed-preset.on{background:var(--purpleA);border-color:var(--purple2);color:var(--purple2)}
-.ed-hint{background:rgba(0,216,200,.04);border:1px solid rgba(0,216,200,.1);border-radius:3px;padding:9px 11px}
-.ed-hint p{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--fg3);line-height:1.65}
-.ed-range{width:100%;accent-color:var(--purple)}
-.edit-ring .card,.edit-ring .hero,.edit-ring .fig-feat,.edit-ring .section,.edit-ring .viewer-box,.edit-ring .stats-bar{outline:1px dashed rgba(160,64,232,.18);transition:outline .15s}
-.edit-ring .card:hover,.edit-ring .hero:hover,.edit-ring .fig-feat:hover,.edit-ring .section:hover,.edit-ring .viewer-box:hover{outline:2px solid rgba(160,64,232,.55);cursor:pointer}
-
-@media(max-width:900px){.g3,.g4{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}.hero-visual{display:none}.nav-links{display:none}.stats-bar{grid-template-columns:1fr 1fr}.fig-feat{grid-template-columns:1fr}#editor{width:280px}#main.editor-open,#nav.editor-open{padding-right:280px}}
+@media(max-width:900px){.g3,.g4{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}.hero-visual{display:none}.nav-links{display:none}.stats-bar{grid-template-columns:1fr 1fr}.fig-feat{grid-template-columns:1fr}}
 
 
 /* ═══ CART PAGE ═══ */
@@ -383,7 +329,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .card:hover .card-glow{opacity:1;filter:brightness(1.6)}
 .card-glow{transition:filter .4s}
 /* boutons : lift, glow, balayage brillant */
-.btn-solid,.btn-outline,.btn-outline-purple,.btn-add,.btn-cart-nav,.btn-edit-toggle,.btn-vctrl,.fchip,.link-more{position:relative;overflow:hidden}
+.btn-solid,.btn-outline,.btn-outline-purple,.btn-add,.btn-cart-nav,.btn-vctrl,.fchip,.link-more{position:relative;overflow:hidden}
 .btn-solid::before,.btn-cart-nav::before{content:'';position:absolute;top:0;left:-90%;width:55%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.4),transparent);transform:skewX(-18deg);transition:left .55s ease;pointer-events:none}
 .btn-solid:hover::before,.btn-cart-nav:hover::before{left:150%}
 .btn-solid:hover{box-shadow:0 7px 26px -5px rgba(255,32,96,.55)}
@@ -453,6 +399,59 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
   *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.05s!important}
   .reveal{opacity:1!important;transform:none!important}
 }
+/* ═══ COMPTES / AUTH ═══ */
+.btn-account-nav{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid rgba(0,216,200,.4);color:var(--cyan2);padding:6px 13px;border-radius:3px;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.btn-account-nav:hover{background:var(--cyanA);border-color:var(--cyan)}
+#authModal{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;background:rgba(4,3,12,.82);backdrop-filter:blur(7px);padding:1.2rem}
+#authModal.open{display:flex;animation:fadein .2s ease}
+.auth-card{position:relative;width:100%;max-width:400px;background:var(--bg2);border:1px solid var(--b1);border-radius:10px;padding:2rem 1.9rem 1.5rem;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.auth-x{position:absolute;top:12px;right:13px;background:transparent;border:none;color:var(--fg3);font-size:1rem;transition:color .15s}
+.auth-x:hover{color:var(--pink)}
+.auth-brand{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.1em;color:var(--pink);line-height:1}
+.auth-title{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.03em;color:var(--fg);margin:.15rem 0 1.1rem}
+.auth-tabs{display:flex;margin-bottom:1.2rem;border-bottom:1px solid var(--b2)}
+.auth-tab{flex:1;font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:none;color:var(--fg3);padding:9px 4px;border-bottom:2px solid transparent;transition:all .18s}
+.auth-tab:hover{color:var(--fg2)}
+.auth-tab.on{color:var(--cyan2);border-bottom-color:var(--cyan)}
+.auth-row{display:flex;flex-direction:column;gap:5px;margin-bottom:.85rem}
+.auth-lbl{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--fg3)}
+.auth-inp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--b1);color:var(--fg);padding:10px 12px;font-size:.9rem;border-radius:4px;outline:none;transition:border-color .18s}
+.auth-inp:focus{border-color:var(--cyan)}
+.auth-err{min-height:1.1rem;font-family:'DM Mono',monospace;font-size:.62rem;color:var(--pink2);margin:.1rem 0 .35rem}
+.auth-submit{width:100%;font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;background:var(--pink);color:#fff;border:none;padding:12px;border-radius:4px;transition:all .18s;margin-top:.2rem}
+.auth-submit:hover{background:var(--pink2)}
+.auth-submit:disabled{opacity:.55}
+.auth-note{font-family:'DM Mono',monospace;font-size:.55rem;line-height:1.6;color:var(--fg3);text-align:center;margin-top:1rem}
+.acc-card{display:flex;align-items:center;gap:1.1rem;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;padding:1.3rem 1.5rem;flex-wrap:wrap}
+.acc-avatar{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--purple));display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:#fff;flex-shrink:0}
+.acc-meta{flex:1;min-width:160px}
+.acc-name{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.03em;color:var(--fg)}
+.acc-mail{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--fg2)}
+.acc-since{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.06em;color:var(--fg3);margin-top:3px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.acc-mode{font-size:.5rem;letter-spacing:.16em;text-transform:uppercase;padding:1px 6px;border-radius:2px}
+.acc-mode.lo{background:rgba(255,32,96,.12);color:var(--pink2);border:1px solid rgba(255,32,96,.3)}
+.acc-mode.sb{background:rgba(0,216,200,.1);color:var(--cyan2);border:1px solid rgba(0,216,200,.3)}
+.acc-guest{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;padding:1.5rem}
+.acc-guest p{color:var(--fg2);width:100%;margin-bottom:.3rem}
+.acc-orders-head{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.04em;color:var(--fg);margin:2.2rem 0 1rem}
+.acc-empty,.acc-loading{text-align:center;color:var(--fg3);padding:2rem;font-family:'DM Mono',monospace;font-size:.7rem}
+.acc-empty p{margin-bottom:.9rem}
+.acc-orders-list{display:flex;flex-direction:column;gap:1rem}
+.ord-card{background:var(--bg3);border:1px solid var(--b2);border-radius:7px;overflow:hidden}
+.ord-head{display:flex;align-items:center;gap:1rem;padding:.85rem 1.2rem;background:var(--bg4);border-bottom:1px solid var(--b2);flex-wrap:wrap}
+.ord-id{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--cyan2);letter-spacing:.06em}
+.ord-date{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--fg3);flex:1}
+.ord-status{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--purple2);background:var(--purpleA);border:1px solid rgba(192,128,255,.25);padding:2px 8px;border-radius:2px}
+.ord-lines{padding:.6rem 1.2rem}
+.ord-line{display:flex;align-items:center;gap:.8rem;padding:.32rem 0;border-bottom:1px solid var(--b2)}
+.ord-line:last-child{border-bottom:none}
+.ord-q{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--pink2);min-width:32px}
+.ord-q.c{color:var(--cyan2)}.ord-q.p{color:var(--purple2)}
+.ord-nm{flex:1;font-size:.85rem;color:var(--fg)}
+.ord-pr{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--fg2)}
+.ord-foot{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.2rem;border-top:1px solid var(--b1);background:var(--bg2)}
+.ord-foot span{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--fg3)}
+.ord-total{color:var(--fg)!important;font-size:.8rem!important}
 </style>
 </head>
 <body>
@@ -471,7 +470,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
   </ul>
   <div class="nav-right">
     <button class="btn-play-nav" onclick="GAME.open()">▶ Jouer</button>
-    <button class="btn-edit-toggle" id="btnEdit" onclick="toggleEditor()">✎ Éditeur</button>
+    <button class="btn-account-nav" id="btnAccount" onclick="accountNavClick()">Compte</button>
     <button class="btn-cart-nav" id="btnCart">Panier <span id="cartN">0</span></button>
   </div>
 </nav>
@@ -733,165 +732,29 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     </footer>
   </div>
 
+  <!-- COMPTE -->
+  <div class="page" id="page-account">
+    <div class="page-hdr">
+      <div class="page-hdr-row">
+        <div class="page-title">Mon <span>compte</span></div>
+        <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--fg3)">Compte · Panier sauvegardé · Historique d'achats</div>
+      </div>
+    </div>
+    <section class="section">
+      <div id="acc-info"></div>
+      <div class="acc-orders-head">Mes commandes</div>
+      <div id="acc-orders"></div>
+    </section>
+    <footer>
+      <div class="footer-logo">FLAMECRAFT</div>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a href="#">Contact</a></nav>
+      <div class="footer-copy">© 2025 Flamecraft</div>
+    </footer>
+  </div>
+
 </div><!-- /main -->
 
-<!-- EDITOR -->
-<div id="editor">
-  <div class="ed-hdr">
-    <div class="ed-ttl">✎ Éditeur de site</div>
-    <button class="ed-close-btn" onclick="toggleEditor()">✕ Fermer</button>
-  </div>
-  <div class="ed-tabs">
-    <button class="ed-tab on" data-tab="site" onclick="edTab(this,'site')">Site</button>
-    <button class="ed-tab" data-tab="hero" onclick="edTab(this,'hero')">Hero</button>
-    <button class="ed-tab" data-tab="produit" onclick="edTab(this,'produit')">Produits</button>
-    <button class="ed-tab" data-tab="trois" onclick="edTab(this,'trois')">3D</button>
-  </div>
-  <div class="ed-body">
 
-    <!-- PANEL SITE -->
-    <div class="ed-panel on" id="ep-site">
-      <div class="ed-group">
-        <div class="ed-gtitle">Identité</div>
-        <div class="ed-lbl">Nom du site</div>
-        <input class="ed-inp" id="e-sitename" value="FLAMECRAFT" oninput="edSite()">
-        <div class="ed-lbl">Sous-titre nav</div>
-        <input class="ed-inp" id="e-sitesub" value="Coques & Figurines 3D" oninput="edSite()">
-      </div>
-      <div class="ed-group">
-        <div class="ed-gtitle">Couleurs</div>
-        <div class="ed-crow"><label>Accent (rose)</label><input type="color" class="ed-cinput" id="e-cpink" value="#ff2060" oninput="edColors()"></div>
-        <div class="ed-crow"><label>Secondaire (cyan)</label><input type="color" class="ed-cinput" id="e-ccyan" value="#00d8c8" oninput="edColors()"></div>
-        <div class="ed-crow"><label>Tertiaire (violet)</label><input type="color" class="ed-cinput" id="e-cpurple" value="#a040e8" oninput="edColors()"></div>
-        <div class="ed-crow"><label>Fond principal</label><input type="color" class="ed-cinput" id="e-cbg" value="#080614" oninput="edColors()"></div>
-        <div class="ed-crow"><label>Fond cartes</label><input type="color" class="ed-cinput" id="e-cbg3" value="#130c28" oninput="edColors()"></div>
-      </div>
-      <div class="ed-group">
-        <div class="ed-gtitle">Typographie</div>
-        <div class="ed-lbl">Police de corps</div>
-        <select class="ed-sel" id="e-fontbody" onchange="edFont()">
-          <option value="'Outfit',sans-serif">Outfit</option>
-          <option value="'DM Mono',monospace">DM Mono</option>
-          <option value="Georgia,serif">Georgia</option>
-          <option value="'Courier New',monospace">Courier New</option>
-        </select>
-        <div class="ed-lbl">Police titres</div>
-        <select class="ed-sel" id="e-fonttitle" onchange="edFontTitle()">
-          <option value="'Bebas Neue',sans-serif">Bebas Neue</option>
-          <option value="Impact,sans-serif">Impact</option>
-          <option value="Georgia,serif">Georgia</option>
-        </select>
-      </div>
-      <div class="ed-group">
-        <div class="ed-gtitle">Grille hero</div>
-        <div class="ed-lbl">Opacité grille fond <span id="e-gridval">3%</span></div>
-        <input type="range" class="ed-range" min="0" max="15" value="3" oninput="edGrid(this)">
-      </div>
-      <button class="ed-fbtn pk" onclick="edExport()">⬇ Exporter le site HTML</button>
-    </div>
-
-    <!-- PANEL HERO -->
-    <div class="ed-panel" id="ep-hero">
-      <div class="ed-group">
-        <div class="ed-gtitle">Textes hero</div>
-        <div class="ed-lbl">Tag eyebrow</div>
-        <input class="ed-inp" id="e-eye" value="Drop 003 — Printemps 2025" oninput="edHero()">
-        <div class="ed-lbl">Ligne 1 (blanc)</div>
-        <input class="ed-inp" id="e-hl1" value="DARK" oninput="edHero()">
-        <div class="ed-lbl">Ligne 2 (rose — accentuée)</div>
-        <input class="ed-inp" id="e-hl2" value="KAWAII" oninput="edHero()">
-        <div class="ed-lbl">Ligne 3 (cyan)</div>
-        <input class="ed-inp" id="e-hl3" value="CRAFT" oninput="edHero()">
-        <div class="ed-lbl">Description</div>
-        <textarea class="ed-inp ed-ta" id="e-hdesc" oninput="edHero()">Coques et figurines imprimées à la main, pièce par pièce. Entre l'obscurité et le mignon. Entre le réel et le pixel.</textarea>
-        <div class="ed-lbl">Bouton principal</div>
-        <input class="ed-inp" id="e-hb1" value="Voir les coques ↗" oninput="edHero()">
-        <div class="ed-lbl">Bouton secondaire</div>
-        <input class="ed-inp" id="e-hb2" value="Figurines" oninput="edHero()">
-      </div>
-      <div class="ed-group">
-        <div class="ed-gtitle">Couleurs hero</div>
-        <div class="ed-crow"><label>Couleur ligne 1</label><input type="color" class="ed-cinput" id="e-hc1" value="#e8deff" oninput="document.getElementById('h-l1').style.color=this.value"></div>
-        <div class="ed-crow"><label>Couleur ligne 2</label><input type="color" class="ed-cinput" id="e-hc2" value="#ff2060" oninput="document.getElementById('h-l2').style.color=this.value"></div>
-        <div class="ed-crow"><label>Couleur ligne 3</label><input type="color" class="ed-cinput" id="e-hc3" value="#00d8c8" oninput="document.getElementById('h-l3').style.color=this.value"></div>
-      </div>
-      <div class="ed-hint"><p>Astuce : les titres hero utilisent la police Bebas Neue. Tu peux changer la police des titres dans l'onglet Site.</p></div>
-    </div>
-
-    <!-- PANEL PRODUITS -->
-    <div class="ed-panel" id="ep-produit">
-      <div class="ed-group">
-        <div class="ed-gtitle">Sélection produit</div>
-        <div class="ed-pnav">
-          <button class="ed-parr" onclick="edProdNav(-1)">←</button>
-          <div class="ed-pname" id="ep-pname">Coque Corrompu</div>
-          <button class="ed-parr" onclick="edProdNav(1)">→</button>
-        </div>
-        <div class="ed-lbl" style="font-size:.55rem;color:var(--fg3);text-align:center" id="ep-pidx">Produit 1 / 10</div>
-      </div>
-      <div class="ed-group">
-        <div class="ed-gtitle">Données produit</div>
-        <div class="ed-lbl">Nom</div>
-        <input class="ed-inp" id="ep-name" oninput="edProd()">
-        <div class="ed-lbl">Catégorie</div>
-        <input class="ed-inp" id="ep-cat" oninput="edProd()">
-        <div class="ed-lbl">Description</div>
-        <textarea class="ed-inp ed-ta" id="ep-desc" oninput="edProd()"></textarea>
-        <div class="ed-lbl">Prix (€)</div>
-        <input class="ed-inp" id="ep-price" type="number" step="0.1" oninput="edProd()">
-        <div class="ed-lbl">Badge</div>
-        <select class="ed-sel" id="ep-badge" onchange="edProd()">
-          <option value="">Aucun</option>
-          <option value="new">Nouveau</option>
-          <option value="lim">Limité</option>
-          <option value="col">Collab</option>
-        </select>
-      </div>
-      <div class="ed-group">
-        <div class="ed-gtitle">Image produit</div>
-        <label class="ed-upload" for="ep-imgfile">
-          <p>Cliquer pour changer l'image</p>
-          <span>PNG · JPG · WebP</span>
-        </label>
-        <input type="file" id="ep-imgfile" class="filein" accept="image/*" onchange="edProdImg(this)">
-      </div>
-      <div class="ed-hint"><p>← → pour naviguer entre les produits. Les modifications sont appliquées en temps réel sur le site.</p></div>
-    </div>
-
-    <!-- PANEL 3D -->
-    <div class="ed-panel" id="ep-trois">
-      <div class="ed-group">
-        <div class="ed-gtitle">Importer un modèle</div>
-        <label class="ed-upload" for="ed-file3d" style="border-color:rgba(160,64,232,.28);background:rgba(160,64,232,.02)">
-          <p style="color:var(--purple2)">Importer un fichier 3D</p>
-          <span style="color:rgba(192,128,255,.5)">STL · OBJ</span>
-        </label>
-        <input type="file" id="ed-file3d" class="filein" accept=".stl,.obj" onchange="v3dLoad(this)">
-      </div>
-      <div class="ed-group">
-        <div class="ed-gtitle">Apparence</div>
-        <div class="ed-crow"><label>Couleur du modèle</label><input type="color" class="ed-cinput" id="e-mcolor" value="#c080ff" oninput="v3dSetColor(this.value)"></div>
-        <div class="ed-crow"><label>Lumière principale</label><input type="color" class="ed-cinput" id="e-lcolor1" value="#ff2060" oninput="v3dSetLight(this.value)"></div>
-        <div class="ed-crow"><label>Contre-jour</label><input type="color" class="ed-cinput" id="e-lcolor2" value="#00d8c8" oninput="v3dSetLight2(this.value)"></div>
-        <div class="ed-crow"><label>Fond viewer</label><input type="color" class="ed-cinput" id="e-vbg" value="#0d0920" oninput="v3dSetBg(this.value)"></div>
-        <div class="ed-lbl">Brillance (metalness)</div>
-        <input type="range" class="ed-range" min="0" max="100" value="30" oninput="v3dSetMetal(this.value/100)">
-        <div class="ed-lbl">Rugosité (roughness)</div>
-        <input type="range" class="ed-range" min="0" max="100" value="55" oninput="v3dSetRough(this.value/100)">
-      </div>
-      <div class="ed-group">
-        <div class="ed-gtitle">Contrôles</div>
-        <div class="ed-trow"><span class="ed-lbl" style="margin:0">Auto-rotation</span><button class="ed-toggle on" id="ed-toggle-rot" onclick="v3dToggleAuto();this.classList.toggle('on')"></button></div>
-        <div style="height:4px"></div>
-        <div class="ed-trow"><span class="ed-lbl" style="margin:0">Wireframe</span><button class="ed-toggle" id="ed-toggle-wire" onclick="v3dToggleWire();this.classList.toggle('on')"></button></div>
-        <div style="height:8px"></div>
-        <button class="ed-fbtn" onclick="v3dResetCam()">Réinitialiser la caméra</button>
-      </div>
-    </div>
-
-
-  </div><!-- /ed-body -->
-</div><!-- /editor -->
 
 <div class="toast" id="toast"></div>
 
@@ -920,6 +783,36 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="authModal" onclick="if(event.target===this)closeAuth()">
+  <div class="auth-card">
+    <button class="auth-x" onclick="closeAuth()" aria-label="Fermer">&#x2715;</button>
+    <div class="auth-brand">FLAMECRAFT</div>
+    <div class="auth-title" id="auth-title">Connexion</div>
+    <div class="auth-tabs">
+      <button type="button" class="auth-tab on" id="auth-tab-login" onclick="setAuthTab('login')">Connexion</button>
+      <button type="button" class="auth-tab" id="auth-tab-signup" onclick="setAuthTab('signup')">Créer un compte</button>
+    </div>
+    <form onsubmit="return submitAuth(event)">
+      <div class="auth-row" id="auth-name-row" style="display:none">
+        <label class="auth-lbl" for="auth-name">Nom / pseudo</label>
+        <input class="auth-inp" id="auth-name" type="text" autocomplete="name" placeholder="Ton nom">
+      </div>
+      <div class="auth-row">
+        <label class="auth-lbl" for="auth-email">E-mail</label>
+        <input class="auth-inp" id="auth-email" type="email" autocomplete="email" placeholder="toi@exemple.com">
+      </div>
+      <div class="auth-row">
+        <label class="auth-lbl" for="auth-pass">Mot de passe</label>
+        <input class="auth-inp" id="auth-pass" type="password" autocomplete="current-password" placeholder="6 caractères minimum">
+      </div>
+      <div class="auth-err" id="auth-err"></div>
+      <button class="auth-submit" id="auth-submit" type="submit">Se connecter</button>
+    </form>
+    <div class="auth-note">Mode local : tes infos restent sur cet appareil. Le cloud multi-appareils (Supabase) s'active côté admin.</div>
   </div>
 </div>
 
@@ -1129,6 +1022,7 @@ function goto(page){
   if(page==='coques'){setTimeout(function(){coqueViewer.init();},200);}
   if(page==='cart')renderCart();
   if(page==='home')playHeroIntro();
+  if(page==='account')renderAccount();
 }
 
 // ═══ FILTER COQUES ═══
@@ -1151,7 +1045,7 @@ function addToCart(type,id,qty){
   const p=prodLookup(type,id); if(!p)return;
   const ex=cart.find(it=>it.type===type&&it.id===id);
   if(ex)ex.qty+=qty; else cart.push({type,id,qty});
-  updateCartBadge();
+  updateCartBadge();persistCart();
   const t={p:'pk',c:'cy',pu:'pu'}[p.theme]||'pk';
   showToast(p.name+(qty>1?' \u00d7'+qty:'')+' ajouté au panier',t);
   if(document.getElementById('page-cart').classList.contains('active'))renderCart();
@@ -1171,18 +1065,30 @@ function cartSetQty(type,id,delta){
   const it=cart.find(c=>c.type===type&&c.id===id); if(!it)return;
   it.qty+=delta;
   if(it.qty<=0)cart=cart.filter(c=>!(c.type===type&&c.id===id));
-  updateCartBadge();renderCart();
+  updateCartBadge();persistCart();renderCart();
 }
 function cartRemove(type,id){
   const p=prodLookup(type,id);
   cart=cart.filter(c=>!(c.type===type&&c.id===id));
-  updateCartBadge();renderCart();
+  updateCartBadge();persistCart();renderCart();
   if(p)showToast(p.name+' retiré','pk');
 }
 function cartCheckout(){
   if(!cart.length){showToast('Ton panier est vide','pk');return;}
-  showToast('Commande validée — merci !','cy');
-  cart=[];updateCartBadge();renderCart();
+  if(!FC.user()){showToast('Connecte-toi pour finaliser ta commande','pu');openAuth('login');return;}
+  var subt=cartSubtotal();
+  var ship=(subt>=50||subt===0)?0:4.90;
+  var order={
+    id:'FC-'+Date.now().toString(36).toUpperCase()+'-'+(Math.floor(Math.random()*900)+100),
+    date:Date.now(),
+    items:cart.map(function(it){var p=prodLookup(it.type,it.id);return{type:it.type,id:it.id,name:p?p.name:'Produit',price:p?parseFloat(p.price):0,qty:it.qty,theme:p?p.theme:'p'};}),
+    subtotal:subt,shipping:ship,total:subt+ship,status:'En préparation'
+  };
+  Promise.resolve(FC.createOrder(order)).then(function(){
+    cart=[];persistCart();updateCartBadge();renderCart();
+    showToast('Commande '+order.id+' validée — merci !','cy');
+    goto('account');
+  });
 }
 
 function cartArtHTML(p,type){
@@ -1356,125 +1262,6 @@ function showToast(msg,cls='pk'){
   const t=document.getElementById('toast');
   t.textContent=msg;t.className='toast '+cls;t.classList.add('show');
   clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),2600);
-}
-
-// ═══ EDITOR ═══
-let editorOpen=false;
-function toggleEditor(){
-  editorOpen=!editorOpen;
-  document.getElementById('editor').classList.toggle('open',editorOpen);
-  document.getElementById('btnEdit').classList.toggle('on',editorOpen);
-  document.getElementById('main').classList.toggle('editor-open',editorOpen);
-  document.getElementById('nav').classList.toggle('editor-open',editorOpen);
-  document.getElementById('main').classList.toggle('edit-ring',editorOpen);
-  if(editorOpen)showToast('Mode édition activé','pu');
-}
-
-function edTab(btn,tab){
-  document.querySelectorAll('.ed-tab').forEach(b=>b.classList.remove('on'));
-  document.querySelectorAll('.ed-panel').forEach(p=>p.classList.remove('on'));
-  btn.classList.add('on');
-  document.getElementById('ep-'+tab).classList.add('on');
-}
-
-function edSite(){
-  const n=document.getElementById('e-sitename').value;
-  document.querySelector('.nav-logo-main').textContent=n;
-  document.getElementById('f-logo').textContent=n;
-  document.querySelector('.nav-logo-sub').textContent=document.getElementById('e-sitesub').value;
-  document.querySelector('#page-home .footer-logo').textContent=n;
-}
-
-function edColors(){
-  const p=document.getElementById('e-cpink').value;
-  const c=document.getElementById('e-ccyan').value;
-  const pu=document.getElementById('e-cpurple').value;
-  const bg=document.getElementById('e-cbg').value;
-  const bg3=document.getElementById('e-cbg3').value;
-  const r=document.documentElement.style;
-  r.setProperty('--pink',p);r.setProperty('--cyan',c);r.setProperty('--purple',pu);
-  r.setProperty('--bg',bg);r.setProperty('--bg3',bg3);
-  r.setProperty('--pink2',p);r.setProperty('--purple2',pu+'cc');
-}
-
-function edFont(){
-  document.body.style.fontFamily=document.getElementById('e-fontbody').value;
-}
-function edFontTitle(){
-  const f=document.getElementById('e-fonttitle').value;
-  document.querySelectorAll('.hero-h1,.sec-h2,.page-title,.fig-title,.cta-title,.nav-logo-main,.footer-logo,.stat-n,.cprice').forEach(el=>el.style.fontFamily=f);
-}
-
-function edGrid(inp){
-  const v=inp.value;
-  document.getElementById('e-gridval').textContent=v+'%';
-  const op=v/100*0.07;
-  document.querySelector('.hero-grid').style.backgroundImage=`linear-gradient(rgba(0,216,200,${op}) 1px,transparent 1px),linear-gradient(90deg,rgba(0,216,200,${op}) 1px,transparent 1px)`;
-}
-
-function edHero(){
-  document.getElementById('h-eye').textContent=document.getElementById('e-eye').value;
-  document.getElementById('h-l1').textContent=document.getElementById('e-hl1').value;
-  document.getElementById('h-l2').textContent=document.getElementById('e-hl2').value;
-  document.getElementById('h-l3').textContent=document.getElementById('e-hl3').value;
-  document.getElementById('h-desc').textContent=document.getElementById('e-hdesc').value;
-  document.getElementById('h-b1').textContent=document.getElementById('e-hb1').value;
-  document.getElementById('h-b2').textContent=document.getElementById('e-hb2').value;
-}
-
-// Products editor
-let allProds=[...COQUES.map(d=>({...d,type:'coque'})),...FIGS.map(d=>({...d,type:'fig'}))];
-function edProdNav(dir){
-  editProdIdx=(editProdIdx+dir+allProds.length)%allProds.length;
-  loadEdProd();
-}
-function loadEdProd(){
-  const d=allProds[editProdIdx];
-  document.getElementById('ep-pname').textContent=d.name;
-  document.getElementById('ep-pidx').textContent=`Produit ${editProdIdx+1} / ${allProds.length} (${d.type==='coque'?'Coque':'Figurine'})`;
-  document.getElementById('ep-name').value=d.name;
-  document.getElementById('ep-cat').value=d.cat;
-  document.getElementById('ep-desc').value=d.desc;
-  document.getElementById('ep-price').value=d.price;
-  document.getElementById('ep-badge').value=d.badge||'';
-}
-function edProd(){
-  const d=allProds[editProdIdx];
-  d.name=document.getElementById('ep-name').value;
-  d.cat=document.getElementById('ep-cat').value;
-  d.desc=document.getElementById('ep-desc').value;
-  d.price=document.getElementById('ep-price').value;
-  d.badge=document.getElementById('ep-badge').value;
-  document.getElementById('ep-pname').textContent=d.name;
-  // Update visible elements
-  const ni=document.getElementById(`pcn-${d.id}`)||document.getElementById(`pfn-${d.id}`);
-  const di=document.getElementById(`pcd-${d.id}`)||document.getElementById(`pfd-${d.id}`);
-  const pi=document.getElementById(`pcp-${d.id}`);
-  if(ni)ni.textContent=d.name;
-  if(di)di.textContent=d.desc;
-  if(pi)pi.textContent=d.price;
-}
-function edProdImg(input){
-  if(!input.files[0])return;
-  const url=URL.createObjectURL(input.files[0]);
-  const d=allProds[editProdIdx];
-  d._img=url;
-  // Re-render relevant grid
-  if(d.type==='coque'){
-    document.getElementById('coques-grid').innerHTML=COQUES.map(renderCoque).join('');
-    document.getElementById('home-coques').innerHTML=COQUES.slice(0,3).map(renderCoque).join('');
-  } else {
-    document.getElementById('figs-grid').innerHTML=FIGS.map(renderFig).join('');
-    document.getElementById('home-figs').innerHTML=FIGS.map(renderFig).join('');
-  }
-  showToast('Image mise à jour','cy');
-}
-
-function edExport(){
-  const html=document.documentElement.outerHTML;
-  const blob=new Blob([html],{type:'text/html'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='flamecraft.html';a.click();
-  showToast('Site exporté !','cy');
 }
 
 // ═══ THREE.JS ═══
@@ -1808,15 +1595,255 @@ function makeCoqueViewer(){
 }
 var coqueViewer=makeCoqueViewer();
 
+// ═══ COMPTES · PANIER · COMMANDES (persistance, backend-ready) ═══════════════
+// Aujourd'hui : mode LOCAL (localStorage — données par appareil).
+// Pour un VRAI backend multi-appareils (Supabase) : renseigner les 2 constantes
+// ci-dessous + coller le SQL fourni. Le reste du code ne change pas.
+const SUPABASE_URL = '';        // ex : 'https://xxxxxxxx.supabase.co'
+const SUPABASE_ANON_KEY = '';   // clé "anon public" du projet Supabase
+
+const FC = (function(){
+  var LS = window.localStorage;
+  var K_USERS='fc_users_v1', K_SESSION='fc_session_v1';
+  function cartKey(id){return 'fc_cart_'+(id||'guest');}
+  function ordKey(id){return 'fc_orders_'+(id||'guest');}
+  var user=null;
+  var listeners=[];
+
+  function rj(k,def){try{var v=LS.getItem(k);return v==null?def:JSON.parse(v);}catch(e){return def;}}
+  function wj(k,v){try{LS.setItem(k,JSON.stringify(v));}catch(e){}}
+  function nid(){return 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+  function nsalt(){return Math.random().toString(36).slice(2)+Date.now().toString(36);}
+  function hash(pw,s){
+    return Promise.resolve().then(function(){
+      var data=new TextEncoder().encode(s+'|'+pw);
+      return crypto.subtle.digest('SHA-256',data);
+    }).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf),function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+    }).catch(function(){
+      var h=5381,str=s+'|'+pw;for(var i=0;i<str.length;i++){h=((h<<5)+h)+str.charCodeAt(i)&0xffffffff;}
+      return 'x'+(h>>>0).toString(16);
+    });
+  }
+  function pub(u){return {id:u.id,name:u.name,email:u.email,createdAt:u.createdAt};}
+  function emit(){listeners.forEach(function(f){try{f(user);}catch(e){}});}
+
+  // ── Backend LOCAL (localStorage) ──
+  var local={
+    signUp:function(name,email,password){
+      email=(email||'').trim().toLowerCase();
+      var users=rj(K_USERS,[]);
+      if(users.some(function(u){return u.email===email;}))return Promise.reject(new Error('Un compte existe déjà avec cet e-mail.'));
+      var s=nsalt();
+      return hash(password,s).then(function(ph){
+        var u={id:nid(),name:(name||'').trim()||email.split('@')[0],email:email,salt:s,passHash:ph,createdAt:Date.now()};
+        users.push(u);wj(K_USERS,users);return u;
+      });
+    },
+    signIn:function(email,password){
+      email=(email||'').trim().toLowerCase();
+      var u=rj(K_USERS,[]).find(function(x){return x.email===email;});
+      if(!u)return Promise.reject(new Error('Aucun compte avec cet e-mail.'));
+      return hash(password,u.salt).then(function(ph){
+        if(ph!==u.passHash)throw new Error('Mot de passe incorrect.');
+        return u;
+      });
+    },
+    signOut:function(){return Promise.resolve();},
+    restore:function(){var sid=LS.getItem(K_SESSION);return Promise.resolve(sid?(rj(K_USERS,[]).find(function(x){return x.id===sid;})||null):null);},
+    saveCart:function(id,items){wj(cartKey(id),items);return Promise.resolve();},
+    loadCart:function(id){return Promise.resolve(rj(cartKey(id),[]));},
+    createOrder:function(id,order){var o=rj(ordKey(id),[]);o.unshift(order);wj(ordKey(id),o);return Promise.resolve();},
+    loadOrders:function(id){return Promise.resolve(rj(ordKey(id),[]));}
+  };
+
+  var backend=local, mode='local';
+
+  function curId(){return user?user.id:'guest';}
+
+  var API={
+    mode:function(){return mode;},
+    user:function(){return user;},
+    onAuth:function(cb){listeners.push(cb);try{cb(user);}catch(e){}},
+    init:function(){
+      if(window.__FC_SUPABASE__){backend=window.__FC_SUPABASE__;mode='supabase';}
+      return Promise.resolve(backend.restore()).then(function(u){if(u)user=pub(u);}).catch(function(){})
+        .then(function(){emit();return API._loadCartIntoApp();});
+    },
+    signUp:function(name,email,password){
+      return Promise.resolve(backend.signUp(name,email,password)).then(function(u){
+        LS.setItem(K_SESSION,u.id);user=pub(u);emit();return API._mergeGuestCart();
+      }).then(function(){return user;});
+    },
+    signIn:function(email,password){
+      return Promise.resolve(backend.signIn(email,password)).then(function(u){
+        LS.setItem(K_SESSION,u.id);user=pub(u);emit();return API._mergeGuestCart();
+      }).then(function(){return user;});
+    },
+    signOut:function(){
+      return Promise.resolve(backend.signOut()).catch(function(){}).then(function(){
+        LS.removeItem(K_SESSION);user=null;emit();
+        cart=[];updateCartBadge();if(isActive('cart'))renderCart();
+      });
+    },
+    saveCart:function(items){return backend.saveCart(curId(),items);},
+    loadCart:function(){return backend.loadCart(curId());},
+    createOrder:function(order){return backend.createOrder(curId(),order);},
+    loadOrders:function(){return backend.loadOrders(curId());},
+    _loadCartIntoApp:function(){
+      return Promise.resolve(API.loadCart()).then(function(items){
+        if(Array.isArray(items)){
+          cart=items.filter(function(it){return prodLookup(it.type,it.id);})
+                    .map(function(it){return {type:it.type,id:it.id,qty:Math.max(1,it.qty|0)};});
+        }
+        updateCartBadge();if(isActive('cart'))renderCart();
+      }).catch(function(){});
+    },
+    _mergeGuestCart:function(){
+      return Promise.all([backend.loadCart('guest'),backend.loadCart(user.id)]).then(function(res){
+        var guest=res[0]||[],mine=res[1]||[],map={};
+        mine.concat(guest).forEach(function(it){if(!prodLookup(it.type,it.id))return;var k=it.type+'#'+it.id;map[k]=(map[k]||0)+Math.max(1,it.qty|0);});
+        var merged=Object.keys(map).map(function(k){var pr=k.split('#');return {type:pr[0],id:+pr[1],qty:map[k]};});
+        return Promise.all([backend.saveCart(user.id,merged),backend.saveCart('guest',[])]).then(function(){
+          cart=merged;updateCartBadge();if(isActive('cart'))renderCart();
+        });
+      }).catch(function(){});
+    }
+  };
+  return API;
+})();
+
+function persistCart(){try{FC.saveCart(cart.map(function(it){return {type:it.type,id:it.id,qty:it.qty};}));}catch(e){}}
+function isActive(page){var el=document.getElementById('page-'+page);return !!el&&el.classList.contains('active');}
+function escHTML(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+// ── Modale d'authentification ──
+var authMode='login';
+function openAuth(m){
+  authMode=m||'login';setAuthTab(authMode);
+  document.getElementById('auth-err').textContent='';
+  document.getElementById('authModal').classList.add('open');
+  setTimeout(function(){var f=document.getElementById('auth-email');if(f)f.focus();},60);
+}
+function closeAuth(){document.getElementById('authModal').classList.remove('open');}
+function setAuthTab(m){
+  authMode=m;
+  document.getElementById('auth-tab-login').classList.toggle('on',m==='login');
+  document.getElementById('auth-tab-signup').classList.toggle('on',m==='signup');
+  document.getElementById('auth-name-row').style.display=m==='signup'?'flex':'none';
+  document.getElementById('auth-submit').textContent=m==='signup'?'Créer mon compte':'Se connecter';
+  document.getElementById('auth-title').textContent=m==='signup'?'Créer un compte':'Connexion';
+  document.getElementById('auth-pass').setAttribute('autocomplete',m==='signup'?'new-password':'current-password');
+  document.getElementById('auth-err').textContent='';
+}
+function accountNavClick(){if(FC.user())goto('account');else openAuth('login');}
+function submitAuth(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  var email=document.getElementById('auth-email').value.trim();
+  var pass=document.getElementById('auth-pass').value;
+  var name=document.getElementById('auth-name').value;
+  var err=document.getElementById('auth-err');err.textContent='';
+  if(!/.+@.+\..+/.test(email)){err.textContent='E-mail invalide.';return false;}
+  if(pass.length<6){err.textContent='Mot de passe : 6 caractères minimum.';return false;}
+  var btn=document.getElementById('auth-submit');btn.disabled=true;
+  var act=authMode==='signup'?FC.signUp(name,email,pass):FC.signIn(email,pass);
+  Promise.resolve(act).then(function(){
+    closeAuth();
+    document.getElementById('auth-pass').value='';
+    showToast((authMode==='signup'?'Bienvenue ':'Salut ')+FC.user().name+' !','cy');
+    goto('account');
+  }).catch(function(e){err.textContent=(e&&e.message)||'Une erreur est survenue.';})
+    .then(function(){btn.disabled=false;});
+  return false;
+}
+
+// reflète l'état de connexion dans la nav + la page compte
+FC.onAuth(function(u){
+  var b=document.getElementById('btnAccount');
+  if(b)b.textContent=u?('◆ '+String(u.name).split(' ')[0]):'Compte';
+  if(isActive('account'))renderAccount();
+});
+
+// ── Page compte + historique des commandes ──
+function renderAccount(){
+  var u=FC.user();
+  var info=document.getElementById('acc-info');
+  var ord=document.getElementById('acc-orders');
+  if(!info||!ord)return;
+  if(!u){
+    info.innerHTML='<div class="acc-guest"><p>Tu n\'es pas connecté.</p>'+
+      '<button class="btn-solid" onclick="openAuth(\'login\')">Se connecter</button>'+
+      '<button class="btn-outline" onclick="openAuth(\'signup\')">Créer un compte</button></div>';
+    ord.innerHTML='';return;
+  }
+  var since=new Date(u.createdAt||Date.now()).toLocaleDateString('fr-FR',{year:'numeric',month:'long'});
+  var modeBadge=FC.mode()==='supabase'?'<span class="acc-mode sb">cloud</span>':'<span class="acc-mode lo">local · cet appareil</span>';
+  info.innerHTML='<div class="acc-card">'+
+    '<div class="acc-avatar">'+escHTML((u.name[0]||'?').toUpperCase())+'</div>'+
+    '<div class="acc-meta"><div class="acc-name">'+escHTML(u.name)+'</div>'+
+    '<div class="acc-mail">'+escHTML(u.email)+'</div>'+
+    '<div class="acc-since">Membre depuis '+since+' '+modeBadge+'</div></div>'+
+    '<button class="btn-outline" onclick="FC.signOut().then(function(){goto(\'home\');showToast(\'Déconnecté\',\'pk\');})">Se déconnecter</button>'+
+    '</div>';
+  ord.innerHTML='<div class="acc-loading">Chargement…</div>';
+  Promise.resolve(FC.loadOrders()).then(function(orders){
+    if(!orders||!orders.length){
+      ord.innerHTML='<div class="acc-empty"><p>Aucune commande pour l\'instant.</p>'+
+        '<button class="btn-solid" onclick="goto(\'coques\')">Parcourir la boutique ↗</button></div>';return;
+    }
+    ord.innerHTML='<div class="acc-orders-list">'+orders.map(renderOrderCard).join('')+'</div>';
+  });
+}
+function renderOrderCard(o){
+  var d=new Date(o.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+  var lines=(o.items||[]).map(function(it){
+    var cc={p:'',c:'c',pu:'p'}[it.theme]||'';
+    return '<div class="ord-line"><span class="ord-q '+cc+'">×'+it.qty+'</span>'+
+      '<span class="ord-nm">'+escHTML(it.name)+'</span>'+
+      '<span class="ord-pr">€'+(it.price*it.qty).toFixed(2)+'</span></div>';
+  }).join('');
+  return '<div class="ord-card"><div class="ord-head">'+
+    '<span class="ord-id">'+escHTML(o.id)+'</span>'+
+    '<span class="ord-date">'+d+'</span>'+
+    '<span class="ord-status">'+escHTML(o.status||'')+'</span></div>'+
+    '<div class="ord-lines">'+lines+'</div>'+
+    '<div class="ord-foot"><span>'+(o.shipping?('Livraison €'+o.shipping.toFixed(2)):'Livraison offerte')+'</span>'+
+    '<span class="ord-total">Total €'+(o.total||0).toFixed(2)+'</span></div></div>';
+}
+
 // ═══ INIT ═══
 renderAll();
 goto('home');
-loadEdProd();
 document.getElementById('btnCart').onclick=function(){goto('cart');};
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'&&document.getElementById('prodModal').classList.contains('open'))closeProduct();
+  if(e.key==='Escape'&&document.getElementById('authModal').classList.contains('open'))closeAuth();
 });
 updateCartBadge();
+
+// ── Adaptateur SUPABASE (activé automatiquement si les 2 constantes sont remplies) ──
+function fcBootstrap(){
+  if(SUPABASE_URL && SUPABASE_ANON_KEY){
+    import('https://esm.sh/@supabase/supabase-js@2').then(function(m){
+      var sb=m.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+      function mapUser(u){if(!u)return null;return {id:u.id,name:(u.user_metadata&&u.user_metadata.name)||(u.email||'').split('@')[0],email:u.email,createdAt:u.created_at?Date.parse(u.created_at):Date.now()};}
+      window.__FC_SUPABASE__={
+        signUp:function(name,email,password){return sb.auth.signUp({email:email,password:password,options:{data:{name:name}}}).then(function(r){if(r.error)throw new Error(r.error.message);if(!r.data.user)throw new Error('Vérifie ta boîte mail pour confirmer le compte.');return mapUser(r.data.user);});},
+        signIn:function(email,password){return sb.auth.signInWithPassword({email:email,password:password}).then(function(r){if(r.error)throw new Error(r.error.message);return mapUser(r.data.user);});},
+        signOut:function(){return sb.auth.signOut();},
+        restore:function(){return sb.auth.getSession().then(function(r){return mapUser(r.data.session&&r.data.session.user);});},
+        saveCart:function(id,items){return sb.from('carts').upsert({user_id:id,items:items,updated_at:new Date().toISOString()}).then(function(r){if(r.error)throw r.error;});},
+        loadCart:function(id){return sb.from('carts').select('items').eq('user_id',id).maybeSingle().then(function(r){return (r.data&&r.data.items)||[];});},
+        createOrder:function(id,order){return sb.from('orders').insert({user_id:id,ref:order.id,data:order}).then(function(r){if(r.error)throw r.error;});},
+        loadOrders:function(id){return sb.from('orders').select('data').eq('user_id',id).order('created_at',{ascending:false}).then(function(r){return (r.data||[]).map(function(x){return x.data;});});}
+      };
+      FC.init();
+    }).catch(function(e){console.warn('Supabase indisponible → repli local',e);FC.init();});
+  } else {
+    FC.init();
+  }
+}
+fcBootstrap();
 
 // ═══ EFFETS VISUELS ═══
 (function(){
@@ -1831,7 +1858,7 @@ updateCartBadge();
     document.querySelectorAll('.sec-head,.stats-bar,.cta-band,.fig-feat,.viewer-box,.marquee-wrap,.page-hdr-row').forEach(function(el){el.classList.add('reveal');io.observe(el);});
   }
   // ripple sur les boutons
-  var RIPPLE='.btn-solid,.btn-outline,.btn-outline-purple,.btn-add,.btn-cart-nav,.btn-edit-toggle';
+  var RIPPLE='.btn-solid,.btn-outline,.btn-outline-purple,.btn-add,.btn-cart-nav';
   document.addEventListener('click',function(e){
     var b=e.target.closest(RIPPLE);if(!b)return;
     var r=b.getBoundingClientRect();var d=Math.max(r.width,r.height)*2;
