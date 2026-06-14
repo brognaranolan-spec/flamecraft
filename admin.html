@@ -139,6 +139,13 @@ tr:hover td{background:rgba(255,255,255,.015)}
 #toast.ok{border-color:var(--ok)}#toast.bad{border-color:var(--pink)}
 .hint{background:rgba(0,216,200,.04);border:1px solid rgba(0,216,200,.12);border-radius:7px;padding:11px 13px;font-family:'DM Mono',monospace;font-size:.62rem;line-height:1.7;color:var(--fg2)}
 .grow{flex:1}
+.asset-sep{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:.16em;text-transform:uppercase;color:var(--purple2);border-top:1px solid var(--b2);padding-top:.9rem;margin-top:.3rem}
+.asset-row{display:flex;gap:11px;align-items:flex-start}
+.asset-thumb{width:58px;height:58px;object-fit:cover;border-radius:7px;border:1px solid var(--b2);flex-shrink:0}
+.asset-none{width:58px;height:58px;border-radius:7px;border:1px dashed var(--b2);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:.5rem;color:var(--fg3);text-align:center;line-height:1.3;flex-shrink:0}
+.asset-3d{width:58px;height:58px;border-radius:7px;border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;color:var(--cyan2);font-size:1.4rem;flex-shrink:0}
+.asset-btns{flex:1;min-width:0}
+.pc-thumb{height:96px;background-size:cover;background-position:center;border-bottom:1px solid var(--b2)}
 </style>
 </head>
 <body>
@@ -480,7 +487,8 @@ function renderProducts(){
 }
 function pcard(type,p){
   var has3d=p.model?'<span class="tag3d">3D</span>':'';
-  return '<div class="pcard'+(p.archived?' arch':'')+'">'+
+  var thumb=p._img?'<div class="pc-thumb" style="background-image:url(\''+esc(p._img)+'\')"></div>':'';
+  return '<div class="pcard'+(p.archived?' arch':'')+'">'+thumb+
     '<div class="pcard-top"><div class="pc-badge">'+esc(p.cat||'—')+'</div>'+
     '<div class="pc-name">'+esc(p.name||'(sans nom)')+'</div>'+
     '<div class="pc-meta"><span class="sw '+p.theme+'"></span><span class="pc-price">€'+esc(p.price)+'</span>'+
@@ -521,8 +529,11 @@ function editProduct(type,id){
       (type==='fig'?field('stock','Stock',p.stock):field('pat','Motif (0-5)',p.pat))+'</div>';
   if(type==='coque')rows+=field('compat','Compatibilité',p.compat);
   else rows+='<div class="frow2">'+field('h','Hauteur',p.h)+field('mat','Matière',p.mat)+'</div>';
-  rows+='<div class="hint">Modèle 3D : <b>'+(p.model?'importé ✓':'rendu procédural')+'</b>. Gère-le dans <a onclick="gotoStudio(\''+type+'\','+id+')">Studio 3D</a>.</div>';
+  rows+='<div class="asset-sep">Visuels du produit</div><div id="dr-assets"></div>'+
+    '<input type="file" id="dr-img-file" accept="image/*" style="display:none" onchange="drImgFile(this)">'+
+    '<input type="file" id="dr-model-file" accept=".stl,.obj" style="display:none" onchange="drModelFile(this)">';
   document.getElementById('drBody').innerHTML=rows;
+  drAssets();
   openDrawer();
 }
 function field(k,lbl,v){return '<div class="frow"><label class="f-lbl">'+lbl+'</label><input class="f-inp" id="d-'+k+'" value="'+esc(v)+'"></div>';}
@@ -540,6 +551,73 @@ function saveDrawer(){
 function openDrawer(){document.getElementById('drawer').classList.add('on');document.getElementById('scrim').classList.add('on');}
 function closeDrawer(){document.getElementById('drawer').classList.remove('on');document.getElementById('scrim').classList.remove('on');}
 function gotoStudio(type,id){closeDrawer();document.querySelector('.nav-it[data-sec="studio"]').click();document.getElementById('studioSel').value=key(type,id);studioPick();}
+
+// ── Import d'assets : modèle 3D (STL/OBJ) + visuel 2D (image, redimensionnée auto) ──
+function resizeImage(file,maxDim){
+  return new Promise(function(resolve){
+    var origExt=(file.name.split('.').pop()||'png').toLowerCase().replace('jpeg','jpg');
+    var fallback={buf:file,ext:origExt,ct:file.type||'application/octet-stream'};
+    try{
+      var img=new Image();var url=URL.createObjectURL(file);
+      img.onload=function(){
+        var s=Math.min(1,maxDim/Math.max(img.width,img.height));
+        var cw=Math.max(1,Math.round(img.width*s)),ch=Math.max(1,Math.round(img.height*s));
+        var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+        cv.getContext('2d').drawImage(img,0,0,cw,ch);URL.revokeObjectURL(url);
+        cv.toBlob(function(b){resolve(b?{buf:b,ext:'webp',ct:'image/webp'}:fallback);},'image/webp',0.85);
+      };
+      img.onerror=function(){URL.revokeObjectURL(url);resolve(fallback);};
+      img.src=url;
+    }catch(e){resolve(fallback);}
+  });
+}
+function uploadAsset(prod,type,id,file,kind){
+  if(kind==='model'){
+    var mext=(file.name.split('.').pop()||'').toLowerCase();
+    if(mext!=='stl'&&mext!=='obj'){toast('Format 3D : STL ou OBJ','bad');return Promise.reject();}
+    if(file.size>9*1024*1024){toast('Fichier 3D trop lourd (max 9 Mo)','bad');return Promise.reject();}
+  }
+  var oldUrl=kind==='img'?prod._img:prod.model;
+  var prep=kind==='img'?resizeImage(file,1100)
+    :file.arrayBuffer().then(function(buf){var e=(file.name.split('.').pop()||'').toLowerCase();return {buf:buf,ext:e,ct:e==='obj'?'text/plain':'application/octet-stream'};});
+  return prep.then(function(a){
+    var mkey=kind==='img'?(type+':'+id+'.img.'+a.ext):(type+':'+id+'.'+a.ext);
+    return api('/admin/model/'+encodeURIComponent(mkey),{method:'POST',headers:{'Content-Type':a.ct},body:a.buf}).then(function(){
+      var url=API_BASE.replace(/\/$/,'')+'/model/'+mkey+'?v='+Date.now();
+      if(kind==='img')prod._img=url;else prod.model=url;
+      if(oldUrl){var oldK=oldUrl.split('?')[0].split('/').pop();if(oldK!==mkey)api('/admin/model/'+encodeURIComponent(oldK),{method:'DELETE'}).catch(function(){});}
+      markDirty();
+    });
+  });
+}
+function drAssets(){
+  if(!drawerCtx)return;
+  var p=findP(drawerCtx.type,drawerCtx.id);
+  var imgPrev=p._img?'<img src="'+esc(p._img)+'" class="asset-thumb">':'<div class="asset-none">vignette<br>procédurale</div>';
+  var modelTxt=p.model?('<span style="color:var(--cyan2)">importé ✓</span> <span class="muted mono" style="font-size:.55rem">'+esc(p.model.split('?')[0].split('/').pop())+'</span>'):'<span class="muted">rendu 3D procédural</span>';
+  document.getElementById('dr-assets').innerHTML=
+    '<div class="frow"><label class="f-lbl">Vignette 2D (image affichée sur la carte)</label>'+
+      '<div class="asset-row">'+imgPrev+
+      '<div class="asset-btns"><div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        '<button class="btn btn-cyan btn-sm" onclick="drPickImg()">Importer une image</button>'+
+        (p._img?'<button class="btn btn-ghost btn-sm" style="color:var(--pink2)" onclick="drClearImg()">Retirer</button>':'')+
+      '</div><div class="muted mono" style="font-size:.54rem;margin-top:4px">JPG / PNG / WebP — redimensionnée auto</div></div></div></div>'+
+    '<div class="frow" style="margin-top:.7rem"><label class="f-lbl">Modèle 3D (visionneuse au clic sur le produit)</label>'+
+      '<div class="asset-row"><div class="asset-3d">◉</div>'+
+      '<div class="asset-btns"><div style="font-size:.74rem;margin-bottom:5px">'+modelTxt+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        '<button class="btn btn-cyan btn-sm" onclick="drPickModel()">Importer STL/OBJ</button>'+
+        (p.model?'<button class="btn btn-ghost btn-sm" style="color:var(--pink2)" onclick="drClearModel()">Retirer</button>':'')+
+        '<button class="btn btn-ghost btn-sm" onclick="gotoStudio(\''+drawerCtx.type+'\','+drawerCtx.id+')">Aperçu 3D ↗</button>'+
+      '</div></div></div></div>';
+}
+function drPickImg(){document.getElementById('dr-img-file').click();}
+function drPickModel(){document.getElementById('dr-model-file').click();}
+function drImgFile(input){var f=input.files[0];if(!f)return;var p=findP(drawerCtx.type,drawerCtx.id);toast('Import de l\'image…');
+  uploadAsset(p,drawerCtx.type,drawerCtx.id,f,'img').then(function(){drAssets();renderProducts();toast('Image importée — publie pour l\'appliquer','ok');}).catch(function(e){if(e)toast('Erreur : '+(e.message||e),'bad');});}
+function drModelFile(input){var f=input.files[0];if(!f)return;var p=findP(drawerCtx.type,drawerCtx.id);toast('Import du modèle 3D…');
+  uploadAsset(p,drawerCtx.type,drawerCtx.id,f,'model').then(function(){drAssets();renderProducts();fillStudioSelect();toast('Modèle 3D importé — publie pour l\'appliquer','ok');}).catch(function(e){if(e)toast('Erreur : '+(e.message||e),'bad');});}
+function drClearImg(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p._img)return;var k=p._img.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});p._img='';markDirty();drAssets();renderProducts();toast('Image retirée');}
+function drClearModel(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p.model)return;var k=p.model.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});p.model='';markDirty();drAssets();renderProducts();fillStudioSelect();toast('Modèle retiré');}
 
 // ═══════════ CONTENU ═══════════
 function fillContent(){
@@ -649,7 +727,7 @@ function studioCur(){var parts=document.getElementById('studioSel').value.split(
 function studioPick(){
   var c=studioCur();if(!c.p)return;
   document.getElementById('studioTheme').value=c.p.theme||'p';
-  document.getElementById('modelInfo').innerHTML=c.p.model?('Modèle importé : <span style="color:var(--cyan2)">'+esc(c.p.model.split('/').pop())+'</span>'):'Aucun modèle importé — rendu procédural par défaut.';
+  document.getElementById('modelInfo').innerHTML=c.p.model?('Modèle importé : <span style="color:var(--cyan2)">'+esc(c.p.model.split('?')[0].split('/').pop())+'</span>'):'Aucun modèle importé — rendu procédural par défaut.';
   document.getElementById('clearModelBtn').style.display=c.p.model?'':'none';
   v3dInit();
   if(c.p.model)v3dLoadUrl(c.p.model);else v3dShowDefault(c.p.theme);
@@ -660,27 +738,17 @@ function onModelFile(input){
   var f=input.files[0];if(!f)return;
   var ext=(f.name.split('.').pop()||'').toLowerCase();
   if(ext!=='stl'&&ext!=='obj'){toast('Format : STL ou OBJ','bad');return;}
-  if(f.size>9*1024*1024){toast('Fichier trop lourd (max 9 Mo)','bad');return;}
   var c=studioCur();
   document.getElementById('modelInfo').textContent='Import en cours… ('+(f.size/1024).toFixed(0)+' Ko)';
-  f.arrayBuffer().then(function(buf){
-    // aperçu immédiat
-    try{v3dShowBuffer(buf,ext,c.p.theme);}catch(e){}
-    // upload vers le Worker
-    var mkey=key(c.type,c.id)+'.'+ext;
-    return api('/admin/model/'+encodeURIComponent(mkey),{method:'POST',headers:{'Content-Type':ext==='obj'?'text/plain':'application/octet-stream'},body:buf}).then(function(){
-      // supprime un éventuel ancien modèle d'extension différente
-      var old=c.p.model;
-      c.p.model=API_BASE.replace(/\/$/,'')+'/model/'+mkey;
-      markDirty();studioPick();renderProducts();fillStudioSelect();document.getElementById('studioSel').value=key(c.type,c.id);
-      toast('Modèle importé — publie pour le mettre en ligne','ok');
-      if(old&&old!==c.p.model){var ok=old.split('/').pop();api('/admin/model/'+encodeURIComponent(ok),{method:'DELETE'}).catch(function(){});}
-    });
-  }).catch(function(e){toast('Erreur import : '+e.message,'bad');});
+  try{f.arrayBuffer().then(function(buf){try{v3dShowBuffer(buf,ext,c.p.theme);}catch(e){}});}catch(e){}
+  uploadAsset(c.p,c.type,c.id,f,'model').then(function(){
+    studioPick();renderProducts();fillStudioSelect();document.getElementById('studioSel').value=key(c.type,c.id);
+    toast('Modèle importé — publie pour le mettre en ligne','ok');
+  }).catch(function(e){if(e)toast('Erreur import : '+(e.message||e),'bad');});
 }
 function clearModel(){
   var c=studioCur();if(!c.p.model)return;
-  var mkey=c.p.model.split('/').pop();
+  var mkey=c.p.model.split('?')[0].split('/').pop();
   api('/admin/model/'+encodeURIComponent(mkey),{method:'DELETE'}).catch(function(){});
   c.p.model='';markDirty();studioPick();renderProducts();fillStudioSelect();document.getElementById('studioSel').value=key(c.type,c.id);
   toast('Modèle retiré — publie pour appliquer');
@@ -724,7 +792,7 @@ function v3dShowDefault(theme){
 }
 function v3dShowBuffer(buf,ext,theme){var geo=ext==='obj'?parseOBJ(new TextDecoder().decode(buf)):parseSTL(buf);v3dMount(geo,theme);}
 function v3dLoadUrl(url){
-  var c=studioCur();var ext=(url.split('.').pop()||'').toLowerCase();
+  var c=studioCur();var ext=(url.split('?')[0].split('.').pop()||'').toLowerCase();
   fetch(url).then(function(r){return ext==='obj'?r.text():r.arrayBuffer();}).then(function(data){
     var geo=ext==='obj'?parseOBJ(data):parseSTL(data);v3dMount(geo,c.p.theme);
   }).catch(function(){v3dShowDefault(c.p.theme);});

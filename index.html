@@ -1023,8 +1023,9 @@ function renderAll(){
 
 function renderFigsPage(){
   const f=FIGS.find(function(d){return !d.archived;})||FIGS[0];
+  const featArt=f._img?`<img src="${f._img}" style="width:100%;height:100%;object-fit:cover">`:mkFigSVG(f.id,f.theme);
   document.getElementById('fig-feature').innerHTML=`
-    <div class="fig-feat-art">${mkFigSVG(0,f.theme)}</div>
+    <div class="fig-feat-art">${featArt}</div>
     <div class="fig-feat-body">
       <div class="sec-tag p">Figurine vedette</div>
       <div class="fig-title">${f.name}</div>
