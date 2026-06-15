@@ -99,8 +99,8 @@ input,textarea,select{font-family:inherit}
 .link-more:hover{color:var(--pink);border-bottom-color:var(--pink)}
 
 /* GRIDS */
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1.2rem}
+.g3{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1.2rem}
+.g4{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.2rem}
 
 /* PRODUCT CARDS */
 .card{background:var(--bg3);border:1px solid var(--b2);border-radius:6px;overflow:hidden;transition:border-color .2s,transform .2s}
@@ -200,7 +200,7 @@ footer{border-top:1px solid var(--b2);padding:1.8rem 3rem;display:flex;align-ite
 .toast.cy{background:var(--bg3);border:1px solid var(--cyan);color:var(--cyan)}
 .toast.pu{background:var(--bg3);border:1px solid var(--purple2);color:var(--purple2)}
 
-@media(max-width:900px){.g3,.g4{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}.hero-visual{display:none}.nav-links{display:none}.stats-bar{grid-template-columns:1fr 1fr}.fig-feat{grid-template-columns:1fr}}
+@media(max-width:900px){.hero{grid-template-columns:1fr}.hero-visual{display:none}.nav-links{display:none}.stats-bar{grid-template-columns:1fr 1fr}.fig-feat{grid-template-columns:1fr}}
 
 
 /* ═══ CART PAGE ═══ */
@@ -869,7 +869,7 @@ const FIGS = [
 ];
 let ALL_PRODS = [...COQUES,...FIGS];
 let cart=[]; // [{type:'coque'|'fig', id, qty}]
-let editProdIdx=0, autoRot=true, wireMode=false;
+let autoRot=true, wireMode=false;
 let v3dScene,v3dCam,v3dRenderer,v3dMesh,v3dAnim,v3dMat,v3dLight1,v3dLight2,v3dInited=false;
 let isDrag=false,prevMX=0,prevMY=0;
 
@@ -1010,8 +1010,10 @@ function renderAll(){
   // home grids
   var liveCoques=COQUES.filter(function(d){return !d.archived;});
   var liveFigs=FIGS.filter(function(d){return !d.archived;});
-  document.getElementById('home-coques').innerHTML=liveCoques.slice(0,3).map(d=>renderCoque(d)).join('');
-  document.getElementById('home-figs').innerHTML=liveFigs.map(renderFig).join('');
+  var homeCoques=liveCoques.filter(function(d){return d.home;});if(!homeCoques.length)homeCoques=liveCoques.slice(0,3);
+  var homeFigs=liveFigs.filter(function(d){return d.home;});if(!homeFigs.length)homeFigs=liveFigs;
+  document.getElementById('home-coques').innerHTML=homeCoques.map(d=>renderCoque(d)).join('');
+  document.getElementById('home-figs').innerHTML=homeFigs.map(renderFig).join('');
   // coques page
   document.getElementById('coques-grid').innerHTML=liveCoques.map(d=>renderCoque(d)).join('');
   // filters
@@ -1999,7 +2001,7 @@ function fcApplyConfig(cfg){
 }
 function fcLoadConfig(){
   var base=fcApiBase();if(!base)return;
-  fetch(base+'/config').then(function(r){return r.json();}).then(function(cfg){
+  fetch(base+'/config?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
     if(cfg&&(cfg.products||cfg.content))fcApplyConfig(cfg);
   }).catch(function(){});
 }

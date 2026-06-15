@@ -146,6 +146,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .asset-3d{width:58px;height:58px;border-radius:7px;border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;color:var(--cyan2);font-size:1.4rem;flex-shrink:0}
 .asset-btns{flex:1;min-width:0}
 .pc-thumb{height:96px;background-size:cover;background-position:center;border-bottom:1px solid var(--b2)}
+.chk{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--fg2);cursor:pointer;user-select:none}
+.chk input{width:16px;height:16px;accent-color:var(--pink)}
 </style>
 </head>
 <body>
@@ -429,7 +431,7 @@ function loadConfig(){
   state.coques=clone(DEFAULT_COQUES);
   state.figs=clone(DEFAULT_FIGS);
   state.content=clone(DEFAULT_CONTENT);
-  return fetch(API_BASE.replace(/\/$/,'')+'/config').then(function(r){return r.json();}).then(function(cfg){
+  return fetch(API_BASE.replace(/\/$/,'')+'/config?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
     if(cfg&&cfg.products){
       Object.keys(cfg.products).forEach(function(k){
         var ov=cfg.products[k];var parts=k.split(':');var type=parts[0];var id=parseInt(parts[1],10);
@@ -493,7 +495,7 @@ function pcard(type,p){
     '<div class="pc-name">'+esc(p.name||'(sans nom)')+'</div>'+
     '<div class="pc-meta"><span class="sw '+p.theme+'"></span><span class="pc-price">€'+esc(p.price)+'</span>'+
     (type==='fig'?'<span>· stock '+esc(p.stock!=null?p.stock:'—')+'</span>':'')+' '+has3d+
-    (p.archived?'<span class="pill pk">archivé</span>':'')+'</div></div>'+
+    (p.home?'<span class="pill warn">accueil</span>':'')+(p.archived?'<span class="pill pk">archivé</span>':'')+'</div></div>'+
     '<div class="pcard-act"><button class="btn btn-ghost btn-sm" onclick="editProduct(\''+type+'\','+p.id+')">Éditer</button>'+
     '<button class="btn btn-ghost btn-sm" onclick="dupProduct(\''+type+'\','+p.id+')">Dupliquer</button>'+
     '<button class="btn btn-ghost btn-sm" onclick="toggleArchive(\''+type+'\','+p.id+')">'+(p.archived?'Restaurer':'Archiver')+'</button></div></div>';
@@ -529,6 +531,7 @@ function editProduct(type,id){
       (type==='fig'?field('stock','Stock',p.stock):field('pat','Motif (0-5)',p.pat))+'</div>';
   if(type==='coque')rows+=field('compat','Compatibilité',p.compat);
   else rows+='<div class="frow2">'+field('h','Hauteur',p.h)+field('mat','Matière',p.mat)+'</div>';
+  rows+='<div class="frow"><label class="f-lbl">Page d\'accueil</label><label class="chk"><input type="checkbox" id="d-home"'+(p.home?' checked':'')+'> Mettre en avant sur la page d\'accueil</label></div>';
   rows+='<div class="asset-sep">Visuels du produit</div><div id="dr-assets"></div>'+
     '<input type="file" id="dr-img-file" accept="image/*" style="display:none" onchange="drImgFile(this)">'+
     '<input type="file" id="dr-model-file" accept=".stl,.obj" style="display:none" onchange="drModelFile(this)">';
@@ -546,6 +549,7 @@ function saveDrawer(){
   ['name','cat','desc','price','badge','theme'].forEach(function(k){var e=document.getElementById('d-'+k);if(e)p[k]=e.value;});
   if(drawerCtx.type==='fig'){p.stock=parseInt(document.getElementById('d-stock').value,10)||0;p.h=document.getElementById('d-h').value;p.mat=document.getElementById('d-mat').value;}
   else{p.compat=document.getElementById('d-compat').value;p.pat=parseInt(document.getElementById('d-pat').value,10)||0;}
+  var hb=document.getElementById('d-home');if(hb)p.home=hb.checked;
   markDirty();renderProducts();fillStudioSelect();closeDrawer();toast('Modifié — pense à publier');
 }
 function openDrawer(){document.getElementById('drawer').classList.add('on');document.getElementById('scrim').classList.add('on');}
