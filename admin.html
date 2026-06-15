@@ -778,6 +778,7 @@ function v3dInit(){
 }
 function v3dColorHex(theme){return {p:0xff2060,c:0x00d8c8,pu:0xb060ff}[theme]||0xff2060;}
 function v3dMount(geo,theme){
+  if(!geo||!geo.attributes||!geo.attributes.position||geo.attributes.position.count<3){toast('Modèle illisible (STL/OBJ invalide)','bad');return v3dShowDefault(theme);}
   if(V.mesh){V.scene.remove(V.mesh);}
   geo.computeBoundingBox();var b=geo.boundingBox,ctr=new THREE.Vector3();b.getCenter(ctr);geo.translate(-ctr.x,-ctr.y,-ctr.z);
   var sz=new THREE.Vector3();b.getSize(sz);var m=Math.max(sz.x,sz.y,sz.z)||1;geo.scale(2/m,2/m,2/m);geo.computeVertexNormals();
@@ -802,9 +803,12 @@ function toggleWire(){V.wire=!V.wire;if(V.mat)V.mat.wireframe=V.wire;document.ge
 
 // parseurs STL/OBJ (identiques au site)
 function parseSTL(buf){
-  var dv=new DataView(buf);var head=String.fromCharCode.apply(null,new Uint8Array(buf,0,5));
-  if(head==='solid'){return parseSTLAscii(new TextDecoder().decode(buf));}
-  var nt=dv.getUint32(80,true);var pos=new Float32Array(nt*9),nor=new Float32Array(nt*9);var off=84;
+  var dv=new DataView(buf);
+  // détection binaire fiable par la taille (84 + n*50) — certains STL binaires commencent par "solid"
+  var nt=buf.byteLength>=84?dv.getUint32(80,true):0;
+  var isBinary=buf.byteLength>=84 && (84+nt*50)===buf.byteLength;
+  if(!isBinary){return parseSTLAscii(new TextDecoder().decode(buf));}
+  var pos=new Float32Array(nt*9),nor=new Float32Array(nt*9);var off=84;
   for(var i=0;i<nt;i++){var nx=dv.getFloat32(off,true),ny=dv.getFloat32(off+4,true),nz=dv.getFloat32(off+8,true);off+=12;
     for(var v=0;v<3;v++){var idx=(i*3+v)*3;pos[idx]=dv.getFloat32(off,true);pos[idx+1]=dv.getFloat32(off+4,true);pos[idx+2]=dv.getFloat32(off+8,true);nor[idx]=nx;nor[idx+1]=ny;nor[idx+2]=nz;off+=12;}off+=2;}
   var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('normal',new THREE.BufferAttribute(nor,3));return geo;

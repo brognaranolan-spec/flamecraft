@@ -1402,9 +1402,11 @@ function v3dPlaceMesh(geo,name){
 // ── Parseurs 3D réutilisables (STL binaire/ASCII + OBJ) → BufferGeometry ──
 function parseSTL(buf){
   const dv=new DataView(buf);
-  const head=String.fromCharCode.apply(null,new Uint8Array(buf,0,5));
-  if(head==='solid'){return parseSTLAscii(new TextDecoder().decode(buf));}
-  const nt=dv.getUint32(80,true);
+  // Détection binaire fiable par la taille (84 + n*50). Certains STL binaires
+  // commencent par "solid" → ne pas se fier au préfixe (sinon géométrie vide).
+  const nt=buf.byteLength>=84?dv.getUint32(80,true):0;
+  const isBinary=buf.byteLength>=84 && (84+nt*50)===buf.byteLength;
+  if(!isBinary){return parseSTLAscii(new TextDecoder().decode(buf));}
   const pos=new Float32Array(nt*9),nor=new Float32Array(nt*9);
   let off=84;
   for(let i=0;i<nt;i++){
@@ -1463,6 +1465,7 @@ function loadCustomModel(url,hex,size){
   const isOBJ=ext==='obj'||/^data:.*obj/i.test(url);
   return fetch(url).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return isOBJ?r.text():r.arrayBuffer();}).then(data=>{
     const geo=isOBJ?parseOBJ(data):parseSTL(data);
+    if(!geo.attributes.position||geo.attributes.position.count<3)throw new Error('Modèle vide ou illisible');
     normalizeGeo(geo,size||2.4);
     const c=new THREE.Color(hex);
     const mat=new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:0.16,metalness:0.45,roughness:0.38});
