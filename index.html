@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -465,6 +466,9 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .pay-spin{display:none;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 #pay-mode-note{color:var(--pink2)}
+.auth-google{display:flex;justify-content:center;margin-bottom:.4rem;min-height:40px}
+.auth-sep{display:flex;align-items:center;gap:10px;margin:.3rem 0 1rem;color:var(--fg3);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase}
+.auth-sep::before,.auth-sep::after{content:'';flex:1;height:1px;background:var(--b2)}
 </style>
 </head>
 <body>
@@ -825,6 +829,8 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
       <button type="button" class="auth-tab on" id="auth-tab-login" onclick="setAuthTab('login')">Connexion</button>
       <button type="button" class="auth-tab" id="auth-tab-signup" onclick="setAuthTab('signup')">Créer un compte</button>
     </div>
+    <div id="auth-google" class="auth-google" style="display:none"></div>
+    <div class="auth-sep" id="auth-sep" style="display:none"><span>ou</span></div>
     <form onsubmit="return submitAuth(event)">
       <div class="auth-row" id="auth-name-row" style="display:none">
         <label class="auth-lbl" for="auth-name">Nom / pseudo</label>
@@ -841,7 +847,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
       <div class="auth-err" id="auth-err"></div>
       <button class="auth-submit" id="auth-submit" type="submit">Se connecter</button>
     </form>
-    <div class="auth-note">Mode local : tes infos restent sur cet appareil. Le cloud multi-appareils (Supabase) s'active côté admin.</div>
+    <div class="auth-note">Connexion sécurisée. Ton panier et tes commandes sont synchronisés sur tous tes appareils.</div>
   </div>
 </div>
 
@@ -1700,6 +1706,30 @@ const FC = (function(){
     loadOrders:function(id){return Promise.resolve(rj(ordKey(id),[]));}
   };
 
+  // ── Backend WORKER (Cloudflare — comptes réels, multi-appareils) ──
+  var K_TOKEN='fc_token_v1';
+  function wbase(){return PAYMENT_API_URL.replace(/\/$/,'');}
+  function wauth(){var t=LS.getItem(K_TOKEN);return t?{'Authorization':'Bearer '+t}:{};}
+  function wpost(path,body,auth){
+    var h={'Content-Type':'application/json'};if(auth)Object.assign(h,wauth());
+    return fetch(wbase()+path,{method:'POST',headers:h,body:JSON.stringify(body||{})}).then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d;});});
+  }
+  function wget(path,auth){
+    var h={};if(auth)Object.assign(h,wauth());
+    return fetch(wbase()+path,{headers:h,cache:'no-store'}).then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d;});});
+  }
+  var worker={
+    signUp:function(name,email,password){return wpost('/auth/signup',{name:name,email:email,password:password}).then(function(d){LS.setItem(K_TOKEN,d.token);return d.user;});},
+    signIn:function(email,password){return wpost('/auth/login',{email:email,password:password}).then(function(d){LS.setItem(K_TOKEN,d.token);return d.user;});},
+    google:function(credential){return wpost('/auth/google',{credential:credential}).then(function(d){LS.setItem(K_TOKEN,d.token);return d.user;});},
+    signOut:function(){return wpost('/auth/logout',{},true).catch(function(){}).then(function(){LS.removeItem(K_TOKEN);});},
+    restore:function(){if(!LS.getItem(K_TOKEN))return Promise.resolve(null);return wget('/auth/me',true).then(function(d){return d.user;}).catch(function(){LS.removeItem(K_TOKEN);return null;});},
+    saveCart:function(id,items){if(id==='guest'){wj(cartKey('guest'),items);return Promise.resolve();}return wpost('/me/cart',{items:items},true).catch(function(){});},
+    loadCart:function(id){if(id==='guest')return Promise.resolve(rj(cartKey('guest'),[]));return wget('/me/cart',true).then(function(d){return d.items||[];}).catch(function(){return [];});},
+    createOrder:function(id,order){if(id==='guest')return Promise.resolve();return wpost('/me/orders',{order:order},true).catch(function(){});},
+    loadOrders:function(id){if(id==='guest')return Promise.resolve([]);return wget('/me/orders',true).then(function(d){return d.orders||[];}).catch(function(){return [];});}
+  };
+
   var backend=local, mode='local';
 
   function curId(){return user?user.id:'guest';}
@@ -1709,7 +1739,8 @@ const FC = (function(){
     user:function(){return user;},
     onAuth:function(cb){listeners.push(cb);try{cb(user);}catch(e){}},
     init:function(){
-      if(window.__FC_SUPABASE__){backend=window.__FC_SUPABASE__;mode='supabase';}
+      if(typeof PAYMENT_API_URL!=='undefined'&&PAYMENT_API_URL){backend=worker;mode='worker';}
+      else if(window.__FC_SUPABASE__){backend=window.__FC_SUPABASE__;mode='supabase';}
       return Promise.resolve(backend.restore()).then(function(u){if(u)user=pub(u);}).catch(function(){})
         .then(function(){emit();return API._loadCartIntoApp();});
     },
@@ -1720,6 +1751,13 @@ const FC = (function(){
     },
     signIn:function(email,password){
       return Promise.resolve(backend.signIn(email,password)).then(function(u){
+        LS.setItem(K_SESSION,u.id);user=pub(u);emit();return API._mergeGuestCart();
+      }).then(function(){return user;});
+    },
+    hasGoogle:function(){return !!backend.google;},
+    google:function(credential){
+      if(!backend.google)return Promise.reject(new Error('Connexion Google indisponible'));
+      return Promise.resolve(backend.google(credential)).then(function(u){
         LS.setItem(K_SESSION,u.id);user=pub(u);emit();return API._mergeGuestCart();
       }).then(function(){return user;});
     },
@@ -1766,9 +1804,27 @@ function openAuth(m){
   authMode=m||'login';setAuthTab(authMode);
   document.getElementById('auth-err').textContent='';
   document.getElementById('authModal').classList.add('open');
+  fcInitGoogle();
   setTimeout(function(){var f=document.getElementById('auth-email');if(f)f.focus();},60);
 }
 function closeAuth(){document.getElementById('authModal').classList.remove('open');}
+var _gisReady=false,_gisTries=0;
+function fcInitGoogle(){
+  var box=document.getElementById('auth-google'),sep=document.getElementById('auth-sep');
+  if(typeof GOOGLE_CLIENT_ID==='undefined'||!GOOGLE_CLIENT_ID||!FC.hasGoogle()){if(box)box.style.display='none';if(sep)sep.style.display='none';return;}
+  if(!window.google||!google.accounts||!google.accounts.id){if(_gisTries++<25)setTimeout(fcInitGoogle,300);return;}
+  if(!_gisReady){try{google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogleCredential});_gisReady=true;}catch(e){return;}}
+  box.innerHTML='';
+  try{google.accounts.id.renderButton(box,{theme:'filled_black',size:'large',text:'continue_with',shape:'pill',width:320});}catch(e){}
+  box.style.display='flex';if(sep)sep.style.display='flex';
+}
+function onGoogleCredential(resp){
+  if(!resp||!resp.credential)return;
+  var err=document.getElementById('auth-err');if(err)err.textContent='Connexion Google…';
+  FC.google(resp.credential).then(function(){
+    closeAuth();showToast('Bienvenue '+FC.user().name+' !','cy');goto('account');
+  }).catch(function(e){if(err)err.textContent=(e&&e.message)||'Échec de la connexion Google.';});
+}
 function setAuthTab(m){
   authMode=m;
   document.getElementById('auth-tab-login').classList.toggle('on',m==='login');
@@ -1820,7 +1876,7 @@ function renderAccount(){
     ord.innerHTML='';return;
   }
   var since=new Date(u.createdAt||Date.now()).toLocaleDateString('fr-FR',{year:'numeric',month:'long'});
-  var modeBadge=FC.mode()==='supabase'?'<span class="acc-mode sb">cloud</span>':'<span class="acc-mode lo">local · cet appareil</span>';
+  var modeBadge=(FC.mode()==='supabase'||FC.mode()==='worker')?'<span class="acc-mode sb">cloud</span>':'<span class="acc-mode lo">local · cet appareil</span>';
   info.innerHTML='<div class="acc-card">'+
     '<div class="acc-avatar">'+escHTML((u.name[0]||'?').toUpperCase())+'</div>'+
     '<div class="acc-meta"><div class="acc-name">'+escHTML(u.name)+'</div>'+
@@ -1859,6 +1915,7 @@ function renderOrderCard(o){
 // Pour activer : renseigner les 2 constantes ci-dessous (voir payment/README.md).
 const STRIPE_PUBLISHABLE_KEY = 'pk_test_51TiDfHAJMKcf8HgiE9XY9No7RdjwEq0hMEtFepmUgc5lowUHUslnaOfvfnIkhj9ZlFzRt7hAYkAtpCTOnRV8dpxV00JCpr279y';  // test (passer en pk_live_... pour la prod)
 const PAYMENT_API_URL        = 'https://flamecraft-pay.brognaranolan.workers.dev';  // Worker Cloudflare
+const GOOGLE_CLIENT_ID       = '';  // ID client OAuth Google (…apps.googleusercontent.com) pour « Se connecter avec Google »
 const PAY_PENDING_KEY = 'fc_pending_order_v1';
 
 var PAY = (function(){

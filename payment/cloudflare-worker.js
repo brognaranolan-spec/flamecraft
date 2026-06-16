@@ -44,7 +44,7 @@ export default {
     const cors = {
       "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
       "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token",
+      "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token, Authorization",
       "Vary": "Origin"
     };
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
@@ -72,6 +72,15 @@ export default {
       if (request.method === "GET" && path.startsWith("/model/")) {
         return getModel(env, decodeURIComponent(path.slice("/model/".length)), cors);
       }
+
+      // ───────── Auth (comptes clients, session par jeton) ─────────
+      if (request.method === "POST" && path === "/auth/signup") return authSignup(request, env, cors);
+      if (request.method === "POST" && path === "/auth/login") return authLogin(request, env, cors);
+      if (request.method === "POST" && path === "/auth/google") return authGoogle(request, env, cors);
+      if (request.method === "GET" && path === "/auth/me") return authMe(request, env, cors);
+      if (request.method === "POST" && path === "/auth/logout") return authLogout(request, env, cors);
+      if (path === "/me/cart") return meCart(request, env, cors);
+      if (path === "/me/orders") return meOrders(request, env, cors);
 
       // ───────── Admin (token requis) ─────────
       if (path.startsWith("/admin/")) {
@@ -271,6 +280,108 @@ async function getOrders(env, cors) {
     };
   });
   return json({ orders }, 200, cors, { "Cache-Control": "no-store" });
+}
+
+// ───────────────────────── Auth (comptes clients) ─────────────────────────
+function b64(buf){var a=new Uint8Array(buf),s="";for(var i=0;i<a.length;i++)s+=String.fromCharCode(a[i]);return btoa(s);}
+function unb64(str){var bin=atob(str),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return a;}
+function randHex(n){var a=crypto.getRandomValues(new Uint8Array(n));return Array.prototype.map.call(a,function(b){return ("0"+b.toString(16)).slice(-2);}).join("");}
+async function derive(password, saltBytes){
+  var km = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  var bits = await crypto.subtle.deriveBits({ name:"PBKDF2", salt:saltBytes, iterations:100000, hash:"SHA-256" }, km, 256);
+  return b64(bits);
+}
+async function hashPassword(password){ var salt = crypto.getRandomValues(new Uint8Array(16)); return { salt:b64(salt.buffer), hash:(await derive(password, salt)) }; }
+async function verifyPassword(password, saltB64, hashB64){ return (await derive(password, unb64(saltB64))) === hashB64; }
+function pubUser(u){ return { id:u.id, email:u.email, name:u.name, provider:u.provider, createdAt:u.createdAt }; }
+function newUid(){ return "u" + Date.now().toString(36) + randHex(4); }
+function validEmail(e){ return /.+@.+\..+/.test(e); }
+
+async function kvGetUserByEmail(env, email){ var id = await env.KV.get("email:"+email); return id ? await env.KV.get("user:"+id, { type:"json" }) : null; }
+async function kvPutUser(env, u){ await env.KV.put("user:"+u.id, JSON.stringify(u)); await env.KV.put("email:"+u.email, u.id); }
+async function createSession(env, userId){
+  var token = randHex(32), ttl = 60*60*24*60; // 60 jours
+  await env.KV.put("sess:"+token, JSON.stringify({ userId:userId, exp:Date.now()+ttl*1000 }), { expirationTtl: ttl });
+  return token;
+}
+async function userFromRequest(env, request){
+  var h = request.headers.get("Authorization") || "", m = h.match(/^Bearer\s+(.+)$/i);
+  if(!m) return null;
+  var sess = await env.KV.get("sess:"+m[1], { type:"json" });
+  if(!sess || (sess.exp && sess.exp < Date.now())) return null;
+  var u = await env.KV.get("user:"+sess.userId, { type:"json" });
+  if(u) u._token = m[1];
+  return u;
+}
+
+async function authSignup(request, env, cors){
+  if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
+  var email = (b.email||"").trim().toLowerCase(), pw = b.password||"";
+  if(!validEmail(email)) return json({ error:"E-mail invalide" }, 400, cors);
+  if(pw.length < 6) return json({ error:"Mot de passe : 6 caractères minimum" }, 400, cors);
+  if(await kvGetUserByEmail(env, email)) return json({ error:"Un compte existe déjà avec cet e-mail" }, 409, cors);
+  var hp = await hashPassword(pw);
+  var u = { id:newUid(), email:email, name:(b.name||"").trim()||email.split("@")[0], salt:hp.salt, hash:hp.hash, provider:"password", createdAt:Date.now() };
+  await kvPutUser(env, u);
+  return json({ token:(await createSession(env, u.id)), user:pubUser(u) }, 200, cors);
+}
+async function authLogin(request, env, cors){
+  if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
+  var email = (b.email||"").trim().toLowerCase();
+  var u = await kvGetUserByEmail(env, email);
+  if(!u || !u.hash || !(await verifyPassword(b.password||"", u.salt, u.hash))) return json({ error:"E-mail ou mot de passe incorrect" }, 401, cors);
+  return json({ token:(await createSession(env, u.id)), user:pubUser(u) }, 200, cors);
+}
+async function authGoogle(request, env, cors){
+  if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
+  if(!env.GOOGLE_CLIENT_ID) return json({ error:"Connexion Google non configurée (GOOGLE_CLIENT_ID manquant)" }, 500, cors);
+  if(!b.credential) return json({ error:"Jeton Google manquant" }, 400, cors);
+  var r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(b.credential));
+  if(!r.ok) return json({ error:"Jeton Google invalide" }, 401, cors);
+  var info = await r.json();
+  if(info.aud !== env.GOOGLE_CLIENT_ID) return json({ error:"Application Google non autorisée" }, 401, cors);
+  if(String(info.email_verified) !== "true") return json({ error:"E-mail Google non vérifié" }, 401, cors);
+  var email = (info.email||"").toLowerCase();
+  if(!validEmail(email)) return json({ error:"E-mail Google absent" }, 400, cors);
+  var u = await kvGetUserByEmail(env, email);
+  if(!u){ u = { id:newUid(), email:email, name:info.name||email.split("@")[0], provider:"google", sub:info.sub, createdAt:Date.now() }; await kvPutUser(env, u); }
+  return json({ token:(await createSession(env, u.id)), user:pubUser(u) }, 200, cors);
+}
+async function authMe(request, env, cors){
+  if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  var u = await userFromRequest(env, request);
+  if(!u) return json({ error:"Session invalide" }, 401, cors);
+  return json({ user:pubUser(u) }, 200, cors);
+}
+async function authLogout(request, env, cors){
+  var h = request.headers.get("Authorization")||"", m = h.match(/^Bearer\s+(.+)$/i);
+  if(m && env.KV) await env.KV.delete("sess:"+m[1]);
+  return json({ ok:true }, 200, cors);
+}
+async function meCart(request, env, cors){
+  if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  var u = await userFromRequest(env, request);
+  if(!u) return json({ error:"Non authentifié" }, 401, cors);
+  if(request.method === "GET"){ var items = await env.KV.get("cart:"+u.id, { type:"json" }); return json({ items:items||[] }, 200, cors, { "Cache-Control":"no-store" }); }
+  var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
+  await env.KV.put("cart:"+u.id, JSON.stringify(Array.isArray(b.items)?b.items:[]));
+  return json({ ok:true }, 200, cors);
+}
+async function meOrders(request, env, cors){
+  if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  var u = await userFromRequest(env, request);
+  if(!u) return json({ error:"Non authentifié" }, 401, cors);
+  if(request.method === "GET"){ var o = await env.KV.get("orders:"+u.id, { type:"json" }); return json({ orders:o||[] }, 200, cors, { "Cache-Control":"no-store" }); }
+  var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
+  if(!b.order) return json({ error:"Commande manquante" }, 400, cors);
+  var arr = (await env.KV.get("orders:"+u.id, { type:"json" })) || [];
+  arr.unshift(b.order);
+  if(arr.length > 200) arr = arr.slice(0, 200);
+  await env.KV.put("orders:"+u.id, JSON.stringify(arr));
+  return json({ ok:true }, 200, cors);
 }
 
 // ───────────────────────── util ─────────────────────────
