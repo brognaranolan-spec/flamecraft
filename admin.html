@@ -697,11 +697,16 @@ function loadOrders(silent){
   document.getElementById('ordersWrap').innerHTML='<span class="muted mono" style="font-size:.66rem">Chargement…</span>';
   api('/admin/orders').then(function(d){orders=d.orders||[];renderOrders();if(!silent)toast('Commandes à jour');}).catch(function(e){document.getElementById('ordersWrap').innerHTML='<span class="mono" style="color:var(--pink2);font-size:.66rem">'+esc(e.message)+'</span>';});
 }
+function fmtShip(sh){
+  if(!sh||!sh.address)return '<span class="muted">—</span>';
+  var a=sh.address,parts=[a.line1,a.line2,((a.postal_code||'')+' '+(a.city||'')).trim(),a.country].filter(Boolean);
+  return '<div style="font-size:.66rem;line-height:1.5"><b>'+esc(sh.name||'')+'</b><br>'+esc(parts.join(', '))+(sh.phone?'<br>'+esc(sh.phone):'')+'</div>';
+}
 function renderOrders(){
   if(!orders.length){document.getElementById('ordersWrap').innerHTML='<span class="muted mono" style="font-size:.66rem">Aucune commande.</span>';return;}
   var st={succeeded:['ok','payée'],processing:['warn','en cours'],requires_payment_method:['pk','échec'],canceled:['pk','annulée']};
-  document.getElementById('ordersWrap').innerHTML='<table><thead><tr><th>Réf</th><th>Date</th><th>Email</th><th>Articles</th><th>Montant</th><th>Statut</th></tr></thead><tbody>'+
-    orders.map(function(o){var s=st[o.status]||['warn',o.status];return '<tr><td class="mono">'+esc(o.ref||o.id.slice(-8))+'</td><td>'+new Date(o.created).toLocaleString('fr-FR')+'</td><td>'+esc(o.email||'—')+'</td><td class="mono" style="font-size:.62rem">'+esc(o.items||'—')+'</td><td>€'+(o.amount/100).toFixed(2)+'</td><td><span class="pill '+s[0]+'">'+s[1]+'</span></td></tr>';}).join('')+'</tbody></table>'+
+  document.getElementById('ordersWrap').innerHTML='<table><thead><tr><th>Réf</th><th>Date</th><th>Email</th><th>Livraison</th><th>Articles</th><th>Montant</th><th>Statut</th></tr></thead><tbody>'+
+    orders.map(function(o){var s=st[o.status]||['warn',o.status];return '<tr><td class="mono">'+esc(o.ref||o.id.slice(-8))+'</td><td>'+new Date(o.created).toLocaleString('fr-FR')+'</td><td>'+esc(o.email||'—')+'</td><td>'+fmtShip(o.shipping)+'</td><td class="mono" style="font-size:.62rem">'+esc(o.items||'—')+'</td><td>€'+(o.amount/100).toFixed(2)+'</td><td><span class="pill '+s[0]+'">'+s[1]+'</span></td></tr>';}).join('')+'</tbody></table>'+
     '<div class="mono muted" style="font-size:.6rem;margin-top:.8rem">Source : Stripe · <a href="https://dashboard.stripe.com/test/payments" target="_blank">ouvrir le dashboard Stripe ↗</a></div>';
 }
 

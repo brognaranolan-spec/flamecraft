@@ -454,6 +454,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .ord-foot{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.2rem;border-top:1px solid var(--b1);background:var(--bg2)}
 .ord-foot span{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--fg3)}
 .ord-total{color:var(--fg)!important;font-size:.8rem!important}
+.ord-ship{padding:.5rem 1.2rem;font-family:'DM Mono',monospace;font-size:.62rem;color:var(--cyan2);border-top:1px solid var(--b2);background:rgba(0,216,200,.03)}
 /* ═══ PAIEMENT (Stripe) ═══ */
 #paymentModal{position:fixed;inset:0;z-index:420;display:none;align-items:center;justify-content:center;background:rgba(4,3,12,.86);backdrop-filter:blur(7px);padding:1.2rem}
 #paymentModal.open{display:flex;animation:fadein .2s ease}
@@ -466,6 +467,10 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .pay-spin{display:none;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 #pay-mode-note{color:var(--pink2)}
+.pay-steplbl{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan2);margin-bottom:.7rem}
+.pay-back{background:transparent;border:none;color:var(--fg3);font-family:'DM Mono',monospace;font-size:.62rem;margin-bottom:.8rem;padding:0}
+.pay-back:hover{color:var(--cyan2)}
+#address-element{margin-bottom:.3rem}
 .auth-google{display:flex;justify-content:center;margin-bottom:.4rem;min-height:40px}
 .auth-sep{display:flex;align-items:center;gap:10px;margin:.3rem 0 1rem;color:var(--fg3);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase}
 .auth-sep::before,.auth-sep::after{content:'';flex:1;height:1px;background:var(--b2)}
@@ -810,11 +815,20 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     <div class="auth-brand">FLAMECRAFT</div>
     <div class="auth-title" style="margin:.15rem 0 .35rem">Paiement</div>
     <div class="pay-sum"><span id="pay-count">0</span> article(s) · <span class="pay-amount" id="pay-amount">€0.00</span></div>
-    <div id="express-checkout"></div>
-    <div class="pay-sep" id="pay-sep"><span>ou payer par carte</span></div>
-    <div id="payment-element"></div>
-    <div class="pay-msg" id="pay-msg"></div>
-    <button class="auth-submit" id="pay-btn" onclick="PAY.pay()"><span class="pay-spin" id="pay-spin"></span><span id="pay-btn-label">Payer</span></button>
+    <div id="pay-step-address">
+      <div class="pay-steplbl">Adresse de livraison</div>
+      <div id="address-element"></div>
+      <div class="pay-msg" id="pay-addr-msg"></div>
+      <button class="auth-submit" id="pay-addr-btn" onclick="PAY.toPayment()"><span class="pay-spin" id="pay-addr-spin"></span>Continuer vers le paiement →</button>
+    </div>
+    <div id="pay-step-payment" style="display:none">
+      <button type="button" class="pay-back" onclick="PAY.back()">← Modifier l'adresse</button>
+      <div id="express-checkout"></div>
+      <div class="pay-sep" id="pay-sep"><span>ou payer par carte</span></div>
+      <div id="payment-element"></div>
+      <div class="pay-msg" id="pay-msg"></div>
+      <button class="auth-submit" id="pay-btn" onclick="PAY.pay()"><span class="pay-spin" id="pay-spin"></span><span id="pay-btn-label">Payer</span></button>
+    </div>
     <div class="auth-note">Paiement sécurisé par Stripe · carte, Apple&nbsp;Pay, Google&nbsp;Pay, PayPal. <span id="pay-mode-note"></span></div>
   </div>
 </div>
@@ -1901,11 +1915,14 @@ function renderOrderCard(o){
       '<span class="ord-nm">'+escHTML(it.name)+'</span>'+
       '<span class="ord-pr">€'+(it.price*it.qty).toFixed(2)+'</span></div>';
   }).join('');
+  var sa=o.shipAddr;var saHtml='';
+  if(sa&&sa.address){var ad=sa.address;var pp=[ad.line1,ad.line2,((ad.postal_code||'')+' '+(ad.city||'')).trim(),ad.country].filter(Boolean).join(', ');
+    saHtml='<div class="ord-ship">Livré à '+escHTML(sa.name||'')+' — '+escHTML(pp)+'</div>';}
   return '<div class="ord-card"><div class="ord-head">'+
     '<span class="ord-id">'+escHTML(o.id)+'</span>'+
     '<span class="ord-date">'+d+'</span>'+
     '<span class="ord-status">'+escHTML(o.status||'')+'</span></div>'+
-    '<div class="ord-lines">'+lines+'</div>'+
+    '<div class="ord-lines">'+lines+'</div>'+saHtml+
     '<div class="ord-foot"><span>'+(o.shipping?('Livraison €'+o.shipping.toFixed(2)):'Livraison offerte')+'</span>'+
     '<span class="ord-total">Total €'+(o.total||0).toFixed(2)+'</span></div></div>';
 }
@@ -1919,13 +1936,17 @@ const GOOGLE_CLIENT_ID       = '466379208065-vgug6p8ru8bj2eo2aqg51ff2gds27alv.ap
 const PAY_PENDING_KEY = 'fc_pending_order_v1';
 
 var PAY = (function(){
-  var stripe=null, elements=null, currentOrder=null;
+  var stripe=null, elements=null, addrElements=null, addrEl=null, currentOrder=null;
+  var APPEARANCE={theme:'night',variables:{colorPrimary:'#ff2060',colorBackground:'#0d0920',colorText:'#e8deff',colorDanger:'#ff5080',borderRadius:'4px',fontFamily:'Outfit, sans-serif'}};
   function enabled(){return !!(STRIPE_PUBLISHABLE_KEY && PAYMENT_API_URL && window.Stripe);}
   function getStripe(){if(!stripe && window.Stripe && STRIPE_PUBLISHABLE_KEY)stripe=Stripe(STRIPE_PUBLISHABLE_KEY);return stripe;}
   function el(id){return document.getElementById(id);}
   function setMsg(t,err){var e=el('pay-msg');if(e){e.textContent=t||'';e.style.color=err?'var(--pink2)':'var(--fg3)';}}
+  function setAddrMsg(t,err){var e=el('pay-addr-msg');if(e){e.textContent=t||'';e.style.color=err?'var(--pink2)':'var(--fg3)';}}
   function busy(b){var btn=el('pay-btn');if(btn)btn.disabled=b;var s=el('pay-spin');if(s)s.style.display=b?'inline-block':'none';}
+  function busyAddr(b){var btn=el('pay-addr-btn');if(btn)btn.disabled=b;var s=el('pay-addr-spin');if(s)s.style.display=b?'inline-block':'none';}
   function returnUrl(){try{localStorage.setItem(PAY_PENDING_KEY,JSON.stringify(currentOrder));}catch(e){}return location.origin+location.pathname;}
+  function showStep(step){el('pay-step-address').style.display=step==='address'?'':'none';el('pay-step-payment').style.display=step==='payment'?'':'none';}
 
   function open(order){
     if(!enabled())return;
@@ -1935,21 +1956,35 @@ var PAY = (function(){
     el('pay-btn-label').textContent='Payer €'+order.total.toFixed(2);
     el('pay-mode-note').textContent=/^pk_test/.test(STRIPE_PUBLISHABLE_KEY)?'(mode test — aucun débit réel)':'';
     el('paymentModal').classList.add('open');
-    setMsg('Initialisation du paiement…');busy(true);
-    fetch(PAYMENT_API_URL.replace(/\/$/,'')+'/create-payment-intent',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({amount:Math.round(order.total*100),currency:'eur',
-        email:(FC.user()&&FC.user().email)||'',ref:order.id,
-        items:order.items.map(function(i){return {type:i.type,id:i.id,qty:i.qty,name:i.name};})})
-    }).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d;});})
-    .then(function(d){if(!d.clientSecret)throw new Error('Réponse invalide du serveur de paiement');mountElements(d.clientSecret);})
-    .catch(function(e){setMsg('Erreur : '+(e.message||e),true);busy(false);});
+    showStep('address');setMsg('');setAddrMsg('');busy(false);busyAddr(false);
+    el('address-element').innerHTML='';
+    addrElements=getStripe().elements({appearance:APPEARANCE});
+    addrEl=addrElements.create('address',{mode:'shipping',fields:{phone:'always'}});
+    addrEl.mount('#address-element');
   }
+
+  function toPayment(){
+    if(!addrEl)return;
+    busyAddr(true);setAddrMsg('Vérification de l\'adresse…');
+    addrEl.getValue().then(function(r){
+      if(!r.complete){setAddrMsg('Complète ton adresse de livraison.',true);busyAddr(false);return;}
+      currentOrder.shipAddr=r.value;
+      setAddrMsg('Préparation du paiement…');
+      return fetch(PAYMENT_API_URL.replace(/\/$/,'')+'/create-payment-intent',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({currency:'eur',email:(FC.user()&&FC.user().email)||'',userId:(FC.user()&&FC.user().id)||'',ref:currentOrder.id,
+          shipping:r.value,
+          items:currentOrder.items.map(function(i){return {type:i.type,id:i.id,qty:i.qty,name:i.name};})})
+      }).then(function(rp){return rp.json().then(function(d){if(!rp.ok)throw new Error(d.error||('HTTP '+rp.status));return d;});})
+      .then(function(d){if(!d.clientSecret)throw new Error('Réponse invalide du serveur de paiement');mountElements(d.clientSecret);showStep('payment');setAddrMsg('');busyAddr(false);});
+    }).catch(function(e){setAddrMsg('Erreur : '+(e.message||e),true);busyAddr(false);});
+  }
+  function back(){showStep('address');}
 
   function mountElements(clientSecret){
     var s=getStripe();
-    var appearance={theme:'night',variables:{colorPrimary:'#ff2060',colorBackground:'#0d0920',colorText:'#e8deff',colorDanger:'#ff5080',borderRadius:'4px',fontFamily:'Outfit, sans-serif'}};
-    elements=s.elements({clientSecret:clientSecret,appearance:appearance});
+    el('express-checkout').innerHTML='';el('payment-element').innerHTML='';el('express-checkout').style.display='';el('pay-sep').style.display='';
+    elements=s.elements({clientSecret:clientSecret,appearance:APPEARANCE});
     // Boutons portefeuilles (Apple Pay / Google Pay / Link / PayPal)
     try{
       var ece=elements.create('expressCheckout');
@@ -1991,10 +2026,11 @@ var PAY = (function(){
 
   function close(){
     el('paymentModal').classList.remove('open');
-    elements=null;currentOrder=null;
+    elements=null;addrElements=null;addrEl=null;currentOrder=null;
     el('express-checkout').innerHTML='';el('express-checkout').style.display='';
     el('payment-element').innerHTML='';el('pay-sep').style.display='';
-    setMsg('');busy(false);
+    el('address-element').innerHTML='';
+    showStep('address');setMsg('');setAddrMsg('');busy(false);busyAddr(false);
   }
 
   function checkReturn(){
@@ -2015,7 +2051,7 @@ var PAY = (function(){
     }).catch(function(){});
   }
 
-  return {enabled:enabled, open:open, pay:pay, close:close, checkReturn:checkReturn};
+  return {enabled:enabled, open:open, toPayment:toPayment, back:back, pay:pay, close:close, checkReturn:checkReturn};
 })();
 
 // ═══ BACKEND DASHBOARD (config temps réel + analytics) ═══════════════════════

@@ -154,6 +154,21 @@ async function createPaymentIntent(request, env, cors) {
   if (body.email) form.set("receipt_email", String(body.email).slice(0, 200));
   if (body.ref) form.set("metadata[ref]", String(body.ref).slice(0, 100));
   form.set("metadata[items]", summary.join(",").slice(0, 480));
+  if (body.userId) form.set("metadata[userId]", String(body.userId).slice(0, 60));
+
+  // Adresse de livraison → attachée au PaymentIntent (visible Stripe + dashboard)
+  const sh = body.shipping;
+  if (sh && sh.address) {
+    if (sh.name) form.set("shipping[name]", String(sh.name).slice(0, 200));
+    if (sh.phone) form.set("shipping[phone]", String(sh.phone).slice(0, 40));
+    const a = sh.address;
+    if (a.line1) form.set("shipping[address][line1]", String(a.line1).slice(0, 200));
+    if (a.line2) form.set("shipping[address][line2]", String(a.line2).slice(0, 200));
+    if (a.city) form.set("shipping[address][city]", String(a.city).slice(0, 100));
+    if (a.state) form.set("shipping[address][state]", String(a.state).slice(0, 100));
+    if (a.postal_code) form.set("shipping[address][postal_code]", String(a.postal_code).slice(0, 30));
+    if (a.country) form.set("shipping[address][country]", String(a.country).slice(0, 2));
+  }
 
   const resp = await fetch("https://api.stripe.com/v1/payment_intents", {
     method: "POST",
@@ -276,6 +291,7 @@ async function getOrders(env, cors) {
       currency: pi.currency,
       status: pi.status,
       email: pi.receipt_email || (pi.charges && pi.charges.data && pi.charges.data[0] && pi.charges.data[0].billing_details && pi.charges.data[0].billing_details.email) || "",
+      shipping: pi.shipping || null,
       created: pi.created * 1000
     };
   });
