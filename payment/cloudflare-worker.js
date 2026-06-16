@@ -66,6 +66,9 @@ export default {
       if (request.method === "POST" && path === "/create-payment-intent") {
         return createPaymentIntent(request, env, cors);
       }
+      if (request.method === "POST" && path === "/stripe-webhook") {
+        return stripeWebhook(request, env, cors);
+      }
       if (request.method === "POST" && path === "/track") {
         return track(request, env, cors);
       }
@@ -390,14 +393,73 @@ async function meOrders(request, env, cors){
   if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
   var u = await userFromRequest(env, request);
   if(!u) return json({ error:"Non authentifié" }, 401, cors);
-  if(request.method === "GET"){ var o = await env.KV.get("orders:"+u.id, { type:"json" }); return json({ orders:o||[] }, 200, cors, { "Cache-Control":"no-store" }); }
+  if(request.method === "GET"){ return json({ orders: await loadUserOrders(env, u.id) }, 200, cors, { "Cache-Control":"no-store" }); }
   var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
-  if(!b.order) return json({ error:"Commande manquante" }, 400, cors);
-  var arr = (await env.KV.get("orders:"+u.id, { type:"json" })) || [];
-  arr.unshift(b.order);
-  if(arr.length > 200) arr = arr.slice(0, 200);
-  await env.KV.put("orders:"+u.id, JSON.stringify(arr));
+  if(!b.order || !b.order.id) return json({ error:"Commande manquante" }, 400, cors);
+  await recordUserOrder(env, u.id, b.order, false);
   return json({ ok:true }, 200, cors);
+}
+
+// Commandes : 1 clé KV par commande (idempotent par référence) ───────────────
+async function recordUserOrder(env, userId, order, onlyIfMissing){
+  var key = "order:" + userId + ":" + String(order.id);
+  if(onlyIfMissing){ if(await env.KV.get(key)) return false; }
+  await env.KV.put(key, JSON.stringify(order));
+  return true;
+}
+async function loadUserOrders(env, userId){
+  var list = await env.KV.list({ prefix: "order:" + userId + ":", limit: 200 });
+  var out = [];
+  for (const k of list.keys) { var o = await env.KV.get(k.name, { type:"json" }); if(o) out.push(o); }
+  out.sort(function(a,b){ return (b.date||0) - (a.date||0); });
+  return out;
+}
+
+// ───────────────────────── Webhook Stripe (commandes fiables) ─────────────────────────
+async function stripeWebhook(request, env, cors){
+  if(!env.STRIPE_WEBHOOK_SECRET) return json({ error:"Webhook non configuré (STRIPE_WEBHOOK_SECRET)" }, 500, cors);
+  var raw = await request.text();
+  if(!(await verifyStripeSig(raw, request.headers.get("Stripe-Signature") || "", env.STRIPE_WEBHOOK_SECRET))) {
+    return json({ error:"Signature invalide" }, 400, cors);
+  }
+  var event; try{ event = JSON.parse(raw); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
+  if(event.type === "payment_intent.succeeded" && env.KV){
+    var pi = event.data.object || {};
+    var uid = pi.metadata && pi.metadata.userId;
+    var ref = (pi.metadata && pi.metadata.ref) || pi.id;
+    if(uid){
+      // enrichit les articles depuis le catalogue publié (noms/prix)
+      var cfg = await env.KV.get("config", { type:"json" });
+      var prods = (cfg && cfg.products) || {};
+      var items = parseItemsMeta(pi.metadata && pi.metadata.items).map(function(it){
+        var p = prods[it.type + ":" + it.id] || {};
+        var price = (p.price != null) ? parseFloat(p.price) : ((DEFAULT_CATALOG[it.type + ":" + it.id] || 0) / 100);
+        return { type:it.type, id:it.id, qty:it.qty, name: p.name || (it.type + " #" + it.id), price: price || 0, theme: p.theme || "p" };
+      });
+      await recordUserOrder(env, uid, {
+        id: ref, date: (pi.created || Math.floor(Date.now()/1000)) * 1000, status: "Payée",
+        total: (pi.amount || 0) / 100, items: items, shipAddr: pi.shipping || null,
+        email: pi.receipt_email || "", source: "webhook"
+      }, true); // n'écrase pas une commande déjà enregistrée côté client
+    }
+  }
+  return json({ received:true }, 200, cors);
+}
+async function verifyStripeSig(raw, sigHeader, secret){
+  try{
+    var parts = {}; sigHeader.split(",").forEach(function(p){ var i = p.indexOf("="); if(i > 0) parts[p.slice(0,i).trim()] = p.slice(i+1).trim(); });
+    if(!parts.t || !parts.v1) return false;
+    var key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name:"HMAC", hash:"SHA-256" }, false, ["sign"]);
+    var mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(parts.t + "." + raw));
+    var expected = Array.prototype.map.call(new Uint8Array(mac), function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+    if(expected.length !== parts.v1.length) return false;
+    var diff = 0; for(var i=0;i<expected.length;i++) diff |= expected.charCodeAt(i) ^ parts.v1.charCodeAt(i);
+    return diff === 0;
+  }catch(e){ return false; }
+}
+function parseItemsMeta(s){
+  if(!s) return [];
+  return String(s).split(",").map(function(part){ var m = part.match(/^([a-z]+):(\d+)x(\d+)$/i); return m ? { type:m[1], id:parseInt(m[2],10), qty:parseInt(m[3],10) } : null; }).filter(Boolean);
 }
 
 // ───────────────────────── util ─────────────────────────
