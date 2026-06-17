@@ -1,0 +1,10 @@
+# Secrets locaux — NE JAMAIS committer
+.secrets
+.secrets.txt
+.env
+.env.local
+.ghtoken.tmp
+*.tmp
+
+# Outils preview
+.claude/

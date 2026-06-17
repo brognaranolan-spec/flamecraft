@@ -427,23 +427,52 @@ async function stripeWebhook(request, env, cors){
     var pi = event.data.object || {};
     var uid = pi.metadata && pi.metadata.userId;
     var ref = (pi.metadata && pi.metadata.ref) || pi.id;
-    if(uid){
-      // enrichit les articles depuis le catalogue publié (noms/prix)
-      var cfg = await env.KV.get("config", { type:"json" });
-      var prods = (cfg && cfg.products) || {};
-      var items = parseItemsMeta(pi.metadata && pi.metadata.items).map(function(it){
-        var p = prods[it.type + ":" + it.id] || {};
-        var price = (p.price != null) ? parseFloat(p.price) : ((DEFAULT_CATALOG[it.type + ":" + it.id] || 0) / 100);
-        return { type:it.type, id:it.id, qty:it.qty, name: p.name || (it.type + " #" + it.id), price: price || 0, theme: p.theme || "p" };
-      });
-      await recordUserOrder(env, uid, {
-        id: ref, date: (pi.created || Math.floor(Date.now()/1000)) * 1000, status: "Payée",
-        total: (pi.amount || 0) / 100, items: items, shipAddr: pi.shipping || null,
-        email: pi.receipt_email || "", source: "webhook"
-      }, true); // n'écrase pas une commande déjà enregistrée côté client
+    // enrichit les articles depuis le catalogue publié (noms/prix)
+    var cfg = await env.KV.get("config", { type:"json" });
+    var prods = (cfg && cfg.products) || {};
+    var items = parseItemsMeta(pi.metadata && pi.metadata.items).map(function(it){
+      var p = prods[it.type + ":" + it.id] || {};
+      var price = (p.price != null) ? parseFloat(p.price) : ((DEFAULT_CATALOG[it.type + ":" + it.id] || 0) / 100);
+      return { type:it.type, id:it.id, qty:it.qty, name: p.name || (it.type + " #" + it.id), price: price || 0, theme: p.theme || "p" };
+    });
+    var order = { id: ref, date: (pi.created || Math.floor(Date.now()/1000)) * 1000, status: "Payée",
+      total: (pi.amount || 0) / 100, items: items, shipAddr: pi.shipping || null, email: pi.receipt_email || "", source: "webhook" };
+    if(uid) await recordUserOrder(env, uid, order, true); // n'écrase pas la commande déjà enregistrée côté client
+    // alerte e-mail au vendeur — une seule fois par commande
+    var mailKey = "mailed:" + ref;
+    if(!(await env.KV.get(mailKey))){
+      await env.KV.put(mailKey, "1", { expirationTtl: 60*60*24*60 });
+      await sendSellerAlert(env, order);
     }
   }
   return json({ received:true }, 200, cors);
+}
+function escHtml(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+async function sendSellerAlert(env, order){
+  if(!env.RESEND_API_KEY || !env.SELLER_EMAIL) return;
+  var from = env.FROM_EMAIL || "FLAMECRAFT <onboarding@resend.dev>";
+  var lines = (order.items || []).map(function(it){ return "&bull; " + it.qty + "&times; " + escHtml(it.name) + " — " + (it.price * it.qty).toFixed(2) + " €"; }).join("<br>");
+  var addr = "";
+  var sa = order.shipAddr;
+  if(sa && sa.address){
+    var a = sa.address;
+    addr = "<p><b>Adresse de livraison</b><br>" + escHtml(sa.name || "") + "<br>" +
+      [a.line1, a.line2, ((a.postal_code||"") + " " + (a.city||"")).trim(), a.country].filter(Boolean).map(escHtml).join("<br>") +
+      (sa.phone ? "<br>Tél : " + escHtml(sa.phone) : "") + "</p>";
+  }
+  var html = "<div style=\"font-family:Arial,sans-serif;max-width:520px\">" +
+    "<h2 style=\"color:#ff2060\">🔥 Nouvelle commande</h2>" +
+    "<p><b>Réf :</b> " + escHtml(order.id) + "<br><b>Total :</b> " + (order.total || 0).toFixed(2) + " €</p>" +
+    "<p>" + lines + "</p>" + addr +
+    (order.email ? "<p><b>Client :</b> " + escHtml(order.email) + "</p>" : "") +
+    "<p style=\"color:#888;font-size:12px\">Détails complets dans ton dashboard FLAMECRAFT.</p></div>";
+  try{
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: from, to: env.SELLER_EMAIL, subject: "🔥 Nouvelle commande — " + (order.total || 0).toFixed(2) + " €", html: html })
+    });
+  }catch(e){}
 }
 async function verifyStripeSig(raw, sigHeader, secret){
   try{
