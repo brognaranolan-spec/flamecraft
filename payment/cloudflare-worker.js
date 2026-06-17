@@ -72,6 +72,9 @@ export default {
       if (request.method === "POST" && path === "/track") {
         return track(request, env, cors);
       }
+      if (request.method === "POST" && path === "/contact") {
+        return contactForm(request, env, cors);
+      }
       if (request.method === "GET" && path.startsWith("/model/")) {
         return getModel(env, decodeURIComponent(path.slice("/model/".length)), cors);
       }
@@ -448,6 +451,23 @@ async function stripeWebhook(request, env, cors){
   return json({ received:true }, 200, cors);
 }
 function escHtml(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+async function contactForm(request, env, cors){
+  if(!env.RESEND_API_KEY || !env.SELLER_EMAIL) return json({ error:"Contact non configuré" }, 500, cors);
+  var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
+  if(b.website) return json({ ok:true }, 200, cors); // honeypot (bot) → on ignore silencieusement
+  var name = (b.name||"").trim().slice(0,120), email = (b.email||"").trim().slice(0,200), msg = (b.message||"").trim().slice(0,4000);
+  if(!validEmail(email) || msg.length < 5) return json({ error:"Formulaire incomplet" }, 400, cors);
+  var html = "<div style=\"font-family:Arial,sans-serif\"><h3 style=\"color:#ff2060\">📩 Message de contact — FLAMECRAFT</h3>" +
+    "<p><b>" + escHtml(name) + "</b> &lt;" + escHtml(email) + "&gt;</p><p>" + escHtml(msg).replace(/\n/g,"<br>") + "</p></div>";
+  try{
+    var r = await fetch("https://api.resend.com/emails", {
+      method:"POST", headers:{ "Authorization":"Bearer "+env.RESEND_API_KEY, "Content-Type":"application/json" },
+      body: JSON.stringify({ from: env.FROM_EMAIL || "FLAMECRAFT <onboarding@resend.dev>", to: env.SELLER_EMAIL, reply_to: email, subject: "📩 Contact — " + name, html: html })
+    });
+    if(!r.ok) return json({ error:"Envoi impossible" }, 502, cors);
+  }catch(e){ return json({ error:"Envoi impossible" }, 502, cors); }
+  return json({ ok:true }, 200, cors);
+}
 async function sendSellerAlert(env, order){
   if(!env.RESEND_API_KEY || !env.SELLER_EMAIL) return;
   var from = env.FROM_EMAIL || "FLAMECRAFT <onboarding@resend.dev>";

@@ -494,6 +494,34 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .auth-google{display:flex;justify-content:center;margin-bottom:.4rem;min-height:40px}
 .auth-sep{display:flex;align-items:center;gap:10px;margin:.3rem 0 1rem;color:var(--fg3);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase}
 .auth-sep::before,.auth-sep::after{content:'';flex:1;height:1px;background:var(--b2)}
+/* ═══ PAGES INFO (À propos / FAQ / Contact) ═══ */
+.prose{max-width:760px}
+.prose p{color:var(--fg2);line-height:1.8;margin-bottom:1.1rem;font-weight:300}
+.prose h3{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.03em;color:var(--fg);margin:2rem 0 .8rem}
+.about-lead{font-size:1.05rem;color:var(--fg);line-height:1.8;margin-bottom:1.4rem}
+.about-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.1rem;margin:1.4rem 0}
+.about-card{background:var(--bg3);border:1px solid var(--b2);border-radius:9px;padding:1.2rem 1.3rem}
+.about-card .ac-t{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan2);margin-bottom:.5rem}
+.about-card p{font-size:.88rem;margin:0;color:var(--fg2);line-height:1.65}
+.faq-list{max-width:760px;display:flex;flex-direction:column;gap:.7rem}
+.faq-item{background:var(--bg3);border:1px solid var(--b2);border-radius:8px;overflow:hidden}
+.faq-q{width:100%;text-align:left;background:transparent;border:none;color:var(--fg);padding:1rem 1.2rem;font-size:.95rem;font-family:'Outfit',sans-serif;display:flex;justify-content:space-between;align-items:center;gap:1rem}
+.faq-q:hover{color:var(--cyan2)}
+.faq-ico{color:var(--pink);font-size:1.3rem;transition:transform .2s;flex-shrink:0;line-height:1}
+.faq-item.open .faq-ico{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .28s ease}
+.faq-item.open .faq-a{max-height:340px}
+.faq-a p{color:var(--fg2);font-size:.88rem;line-height:1.7;padding:0 1.2rem 1.1rem;margin:0;font-weight:300}
+.contact-wrap{display:grid;grid-template-columns:1.2fr .8fr;gap:2rem;max-width:900px}
+@media(max-width:760px){.contact-wrap{grid-template-columns:1fr}}
+.ct-form{display:flex;flex-direction:column;gap:.9rem;position:relative}
+.ct-form input,.ct-form textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--b1);color:var(--fg);padding:11px 13px;font-size:.9rem;border-radius:5px;outline:none;transition:border-color .15s;font-family:'Outfit',sans-serif}
+.ct-form input:focus,.ct-form textarea:focus{border-color:var(--cyan)}
+.ct-form textarea{min-height:130px;resize:vertical}
+.ct-msg{min-height:1.2rem;font-family:'DM Mono',monospace;font-size:.66rem}
+.cs-block{background:var(--bg3);border:1px solid var(--b2);border-radius:9px;padding:1.1rem 1.2rem;margin-bottom:1rem}
+.cs-lbl{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--fg3);margin-bottom:.4rem}
+.cs-block a{color:var(--cyan2)}
 </style>
 </head>
 <body>
@@ -590,7 +618,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 
     <footer>
       <div class="footer-logo" id="f-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a href="#">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
       <div class="footer-copy">© 2025 Flamecraft — Bretagne, France</div>
     </footer>
   </div>
@@ -643,7 +671,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a href="#">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
       <div class="footer-copy">© 2025 Flamecraft</div>
     </footer>
   </div>
@@ -699,7 +727,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a href="#">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
       <div class="footer-copy">© 2025 Flamecraft</div>
     </footer>
   </div>
@@ -751,7 +779,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a href="#">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
       <div class="footer-copy">© 2025 Flamecraft</div>
     </footer>
   </div>
@@ -769,7 +797,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a href="#">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
       <div class="footer-copy">© 2025 Flamecraft</div>
     </footer>
   </div>
@@ -789,9 +817,72 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a href="#">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
       <div class="footer-copy">© 2025 Flamecraft</div>
     </footer>
+  </div>
+
+  <!-- À PROPOS -->
+  <div class="page" id="page-about">
+    <div class="page-hdr"><div class="page-hdr-row"><div class="page-title">À <span>propos</span></div>
+      <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--fg3)">Fait main · Bretagne</div></div></div>
+    <section class="section">
+      <div class="prose">
+        <p class="about-lead">FLAMECRAFT, c'est un atelier où le feu rencontre le pixel. Des coques de briquet et des figurines imprimées en 3D, dessinées et fabriquées à la main, pièce par pièce — entre l'obscurité et le mignon.</p>
+        <p>Tout part d'une idée, d'un croquis ou d'un délire. On modélise, on imprime, on ponce, on assemble : chaque objet passe entre les mains avant de partir chez toi. Pas de production de masse — des séries courtes, des éditions limitées, et beaucoup de sur-mesure.</p>
+        <div class="about-grid">
+          <div class="about-card"><div class="ac-t">Le fait main</div><p>Chaque pièce est imprimée et finie à la demande dans notre atelier en Bretagne. Aucune n'est tout à fait identique.</p></div>
+          <div class="about-card"><div class="ac-t">L'impression 3D</div><p>PLA+, PETG, filament soie et résine UV pour les détails sub-millimétriques. Le bon matériau pour chaque objet.</p></div>
+          <div class="about-card"><div class="ac-t">Dark kawaii</div><p>Une esthétique entre néon, glitch et tendresse. Du sombre, du mignon, et toujours un brin de cyberpunk.</p></div>
+        </div>
+        <h3>Le sur-mesure</h3>
+        <p>Envoie-nous ton design, ton pseudo, ou juste une ambiance — on le transforme en objet réel. <a onclick="goto('custom')" style="color:var(--cyan2);cursor:pointer">Demander un devis ↗</a></p>
+      </div>
+    </section>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2025 Flamecraft</div></footer>
+  </div>
+
+  <!-- FAQ -->
+  <div class="page" id="page-faq">
+    <div class="page-hdr"><div class="page-hdr-row"><div class="page-title">Questions <span>fréquentes</span></div></div></div>
+    <section class="section">
+      <div class="faq-list">
+        <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Combien de temps pour recevoir ma commande ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Tout est fabriqué à la demande : compte 2 à 5 jours ouvrés de fabrication, puis 2 à 4 jours de livraison en France. Tu reçois un e-mail dès l'expédition.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">En quelles matières sont les pièces ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Coques en PLA+ ou PETG (résistant, mat ou translucide). Figurines en filament soie bicolore ou en résine UV pour les détails les plus fins. Le matériau est choisi selon l'objet.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Comment entretenir ma coque ou ma figurine ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Un chiffon doux légèrement humide suffit. Évite l'eau chaude, les solvants et l'exposition prolongée au soleil pour préserver les couleurs. Les pièces résine se manipulent avec un peu plus de délicatesse.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Quels briquets sont compatibles ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Selon le modèle : Bic J5 / J25 / J38, Cricket, Clipper. La compatibilité est indiquée sur chaque coque. Un doute ? Écris-nous via la page Contact.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Puis-je commander une pièce sur-mesure ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Oui ! C'est même notre truc. Envoie ton idée, ton design ou ton pseudo via la page <a onclick="goto('custom')" style="color:var(--cyan2);cursor:pointer">Sur-mesure</a> et on te fait un devis.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Puis-je être remboursé·e ou retourner un article ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Pour les articles standard : droit de rétractation de 14 jours. Les pièces personnalisées / sur-mesure, fabriquées spécialement pour toi, en sont exclues (article L221-28 du Code de la consommation). En cas de casse à la réception, contacte-nous, on trouve une solution.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Le paiement est-il sécurisé ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Oui : paiement géré par Stripe (carte bancaire, Apple Pay, Google Pay, PayPal). Tes coordonnées bancaires ne transitent jamais par notre site.</p></div></div>
+      </div>
+    </section>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2025 Flamecraft</div></footer>
+  </div>
+
+  <!-- CONTACT -->
+  <div class="page" id="page-contact">
+    <div class="page-hdr"><div class="page-hdr-row"><div class="page-title">Nous <span>contacter</span></div></div></div>
+    <section class="section">
+      <div class="contact-wrap">
+        <div>
+          <p style="color:var(--fg2);margin-bottom:1.2rem;max-width:520px;font-weight:300">Une question, une idée de sur-mesure, un souci avec ta commande ? Écris-nous, on répond vite.</p>
+          <form class="ct-form" onsubmit="return submitContact(event)">
+            <input id="ct-name" type="text" placeholder="Ton nom" autocomplete="name">
+            <input id="ct-email" type="email" placeholder="Ton e-mail" autocomplete="email">
+            <textarea id="ct-msg" placeholder="Ton message…"></textarea>
+            <input id="ct-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+            <div class="ct-msg" id="ct-status"></div>
+            <button class="btn-solid" type="submit" id="ct-btn" style="align-self:flex-start">Envoyer le message ↗</button>
+          </form>
+        </div>
+        <div>
+          <div class="cs-block" id="ct-email-block" style="display:none"><div class="cs-lbl">E-mail</div><a id="ct-email-link" href="#">—</a></div>
+          <div class="cs-block"><div class="cs-lbl">Réseaux</div><div><a href="#">Instagram</a> · <a href="#">Etsy</a></div></div>
+          <div class="cs-block"><div class="cs-lbl">Atelier</div><div style="color:var(--fg2);font-size:.85rem">Fait main · Bretagne, France</div></div>
+        </div>
+      </div>
+    </section>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2025 Flamecraft</div></footer>
   </div>
 
 </div><!-- /main -->
@@ -2108,7 +2199,8 @@ function fcApplyConfig(cfg){
   fcSetTxt('h-desc',c.desc);fcSetTxt('h-b1',c.btn1);fcSetTxt('h-b2',c.btn2);
   if(c.siteName){var nm=document.querySelector('.nav-logo-main');if(nm)nm.textContent=c.siteName;document.querySelectorAll('.footer-logo').forEach(function(e){e.textContent=c.siteName;});}
   if(c.siteSub){var sb=document.querySelector('.nav-logo-sub');if(sb)sb.textContent=c.siteSub;}
-  if(c.instagram||c.etsy){document.querySelectorAll('.footer-nav a').forEach(function(a){var t=a.textContent.toLowerCase();if(t.indexOf('instagram')>=0&&c.instagram){a.href=c.instagram;a.target='_blank';}if(t.indexOf('etsy')>=0&&c.etsy){a.href=c.etsy;a.target='_blank';}});}
+  if(c.instagram||c.etsy){document.querySelectorAll('.footer-nav a, .cs-block a').forEach(function(a){var t=a.textContent.toLowerCase();if(t.indexOf('instagram')>=0&&c.instagram){a.href=c.instagram;a.target='_blank';}if(t.indexOf('etsy')>=0&&c.etsy){a.href=c.etsy;a.target='_blank';}});}
+  if(c.contactEmail){var cel=document.getElementById('ct-email-link');if(cel){cel.href='mailto:'+c.contactEmail;cel.textContent=c.contactEmail;}var ceb=document.getElementById('ct-email-block');if(ceb)ceb.style.display='';}
   renderAll();
   if(isActive('figurines'))renderFigsPage();
 }
@@ -2117,6 +2209,26 @@ function fcLoadConfig(){
   fetch(base+'/config?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
     if(cfg&&(cfg.products||cfg.content))fcApplyConfig(cfg);
   }).catch(function(){});
+}
+
+// ═══ FAQ + CONTACT ═══
+function faqToggle(btn){var item=btn.closest('.faq-item');if(item)item.classList.toggle('open');}
+function submitContact(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  var name=document.getElementById('ct-name').value.trim();
+  var email=document.getElementById('ct-email').value.trim();
+  var msg=document.getElementById('ct-msg').value.trim();
+  var hp=document.getElementById('ct-website').value;
+  var st=document.getElementById('ct-status'),btn=document.getElementById('ct-btn');
+  if(!/.+@.+\..+/.test(email)||msg.length<5){st.style.color='var(--pink2)';st.textContent='Renseigne un e-mail valide et un message (5 caractères min).';return false;}
+  var base=fcApiBase();if(!base){st.style.color='var(--pink2)';st.textContent='Service indisponible.';return false;}
+  btn.disabled=true;st.style.color='var(--fg3)';st.textContent='Envoi…';
+  fetch(base+'/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,email:email,message:msg,website:hp})})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'Erreur');return d;});})
+    .then(function(){st.style.color='var(--cyan2)';st.textContent='Message envoyé — merci, on revient vers toi vite !';document.getElementById('ct-name').value='';document.getElementById('ct-email').value='';document.getElementById('ct-msg').value='';})
+    .catch(function(e){st.style.color='var(--pink2)';st.textContent='Échec : '+(e.message||e);})
+    .then(function(){btn.disabled=false;});
+  return false;
 }
 
 // ═══ INIT ═══
