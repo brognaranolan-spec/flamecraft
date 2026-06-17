@@ -1867,7 +1867,8 @@ const FC = (function(){
     saveCart:function(id,items){if(id==='guest'){wj(cartKey('guest'),items);return Promise.resolve();}return wpost('/me/cart',{items:items},true).catch(function(){});},
     loadCart:function(id){if(id==='guest')return Promise.resolve(rj(cartKey('guest'),[]));return wget('/me/cart',true).then(function(d){return d.items||[];}).catch(function(){return [];});},
     createOrder:function(id,order){if(id==='guest')return Promise.resolve();return wpost('/me/orders',{order:order},true).catch(function(){});},
-    loadOrders:function(id){if(id==='guest')return Promise.resolve([]);return wget('/me/orders',true).then(function(d){return d.orders||[];}).catch(function(){return [];});}
+    loadOrders:function(id){if(id==='guest')return Promise.resolve([]);return wget('/me/orders',true).then(function(d){return d.orders||[];}).catch(function(){return [];});},
+    deleteAccount:function(){return wpost('/me/delete',{},true);}
   };
 
   var backend=local, mode='local';
@@ -1906,6 +1907,10 @@ const FC = (function(){
         LS.removeItem(K_SESSION);user=null;emit();
         cart=[];updateCartBadge();if(isActive('cart'))renderCart();
       });
+    },
+    deleteAccount:function(){
+      if(!backend.deleteAccount)return Promise.reject(new Error('Indisponible en mode local'));
+      return Promise.resolve(backend.deleteAccount()).then(function(){return API.signOut();});
     },
     saveCart:function(items){return backend.saveCart(curId(),items);},
     loadCart:function(){return backend.loadCart(curId());},
@@ -2023,7 +2028,8 @@ function renderAccount(){
     '<div class="acc-mail">'+escHTML(u.email)+'</div>'+
     '<div class="acc-since">Membre depuis '+since+' '+modeBadge+'</div></div>'+
     '<button class="btn-outline" onclick="FC.signOut().then(function(){goto(\'home\');showToast(\'Déconnecté\',\'pk\');})">Se déconnecter</button>'+
-    '</div>';
+    '</div>'+
+    '<div style="margin-top:.9rem"><a onclick="confirmDeleteAccount()" style="font-family:\'DM Mono\',monospace;font-size:.6rem;letter-spacing:.06em;color:var(--fg3);cursor:pointer;border-bottom:1px solid var(--b2)">Supprimer mon compte et mes données (RGPD)</a></div>';
   ord.innerHTML='<div class="acc-loading">Chargement…</div>';
   Promise.resolve(FC.loadOrders()).then(function(orders){
     if(!orders||!orders.length){
@@ -2232,6 +2238,10 @@ function fcLoadConfig(){
 }
 
 // ═══ FAQ + CONTACT ═══
+function confirmDeleteAccount(){
+  if(!confirm('Supprimer définitivement ton compte et toutes tes données (commandes, panier) ? Cette action est irréversible.'))return;
+  FC.deleteAccount().then(function(){showToast('Compte supprimé','pk');goto('home');}).catch(function(e){showToast('Erreur : '+((e&&e.message)||e),'pk');});
+}
 function faqToggle(btn){var item=btn.closest('.faq-item');if(item)item.classList.toggle('open');}
 function submitContact(ev){
   if(ev&&ev.preventDefault)ev.preventDefault();

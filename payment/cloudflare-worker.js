@@ -41,12 +41,7 @@ const MAX_MODEL_BYTES = 9 * 1024 * 1024; // 9 Mo max par modèle 3D
 
 export default {
   async fetch(request, env) {
-    const cors = {
-      "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
-      "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token, Authorization",
-      "Vary": "Origin"
-    };
+    const cors = corsFor(request, env);
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
     const url = new URL(request.url);
@@ -87,6 +82,7 @@ export default {
       if (request.method === "POST" && path === "/auth/logout") return authLogout(request, env, cors);
       if (path === "/me/cart") return meCart(request, env, cors);
       if (path === "/me/orders") return meOrders(request, env, cors);
+      if (request.method === "POST" && path === "/me/delete") return deleteAccount(request, env, cors);
 
       // ───────── Admin (token requis) ─────────
       if (path.startsWith("/admin/")) {
@@ -338,6 +334,7 @@ async function userFromRequest(env, request){
 
 async function authSignup(request, env, cors){
   if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  if(await rateLimited(env, request.headers.get("CF-Connecting-IP")||"", "signup", 6, 3600)) return json({ error:"Trop de tentatives. Réessaie plus tard." }, 429, cors);
   var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
   var email = (b.email||"").trim().toLowerCase(), pw = b.password||"";
   if(!validEmail(email)) return json({ error:"E-mail invalide" }, 400, cors);
@@ -350,6 +347,7 @@ async function authSignup(request, env, cors){
 }
 async function authLogin(request, env, cors){
   if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  if(await rateLimited(env, request.headers.get("CF-Connecting-IP")||"", "login", 12, 300)) return json({ error:"Trop de tentatives. Réessaie dans quelques minutes." }, 429, cors);
   var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
   var email = (b.email||"").trim().toLowerCase();
   var u = await kvGetUserByEmail(env, email);
@@ -461,6 +459,7 @@ async function stripeWebhook(request, env, cors){
 function escHtml(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
 async function contactForm(request, env, cors){
   if(!env.RESEND_API_KEY || !env.SELLER_EMAIL) return json({ error:"Contact non configuré" }, 500, cors);
+  if(await rateLimited(env, request.headers.get("CF-Connecting-IP")||"", "contact", 5, 600)) return json({ error:"Trop de messages envoyés. Réessaie plus tard." }, 429, cors);
   var b; try{ b = await request.json(); }catch(e){ return json({ error:"JSON invalide" }, 400, cors); }
   if(b.website) return json({ ok:true }, 200, cors); // honeypot (bot) → on ignore silencieusement
   var name = (b.name||"").trim().slice(0,120), email = (b.email||"").trim().slice(0,200), msg = (b.message||"").trim().slice(0,4000);
@@ -517,6 +516,38 @@ async function verifyStripeSig(raw, sigHeader, secret){
 function parseItemsMeta(s){
   if(!s) return [];
   return String(s).split(",").map(function(part){ var m = part.match(/^([a-z]+):(\d+)x(\d+)$/i); return m ? { type:m[1], id:parseInt(m[2],10), qty:parseInt(m[3],10) } : null; }).filter(Boolean);
+}
+
+// ───────────────────────── Sécurité / RGPD ─────────────────────────
+function corsFor(request, env){
+  var allowed = (env.ALLOWED_ORIGIN || "").split(",").map(function(s){ return s.trim(); }).filter(Boolean);
+  var origin = request.headers.get("Origin") || "";
+  var ao = allowed.length === 0 ? "*" : (allowed.indexOf(origin) >= 0 ? origin : allowed[0]);
+  return {
+    "Access-Control-Allow-Origin": ao,
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token, Authorization",
+    "Vary": "Origin"
+  };
+}
+async function rateLimited(env, ip, action, max, windowSec){
+  if(!env.KV || !ip) return false;
+  var k = "rl:" + action + ":" + ip;
+  var n = (parseInt(await env.KV.get(k), 10) || 0) + 1;
+  await env.KV.put(k, String(n), { expirationTtl: windowSec });
+  return n > max;
+}
+async function deleteAccount(request, env, cors){
+  if(!env.KV) return json({ error:"KV non lié" }, 500, cors);
+  var u = await userFromRequest(env, request);
+  if(!u) return json({ error:"Non authentifié" }, 401, cors);
+  await env.KV.delete("user:" + u.id);
+  await env.KV.delete("email:" + u.email);
+  await env.KV.delete("cart:" + u.id);
+  var list = await env.KV.list({ prefix: "order:" + u.id + ":" });
+  for (const k of list.keys) { await env.KV.delete(k.name); }
+  if(u._token) await env.KV.delete("sess:" + u._token);
+  return json({ ok:true }, 200, cors);
 }
 
 // ───────────────────────── util ─────────────────────────
