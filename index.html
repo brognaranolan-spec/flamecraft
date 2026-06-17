@@ -927,6 +927,11 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     <div class="auth-title" style="margin:.15rem 0 .35rem">Paiement</div>
     <div class="pay-sum"><span id="pay-count">0</span> article(s) · <span class="pay-amount" id="pay-amount">€0.00</span></div>
     <div id="pay-step-address">
+      <div id="pay-email-row" style="display:none;margin-bottom:.8rem">
+        <div class="pay-steplbl">Ton e-mail (pour le reçu &amp; le suivi)</div>
+        <input class="auth-inp" id="pay-email" type="email" autocomplete="email" placeholder="toi@exemple.com">
+        <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--fg3);margin-top:5px">Tu paies en invité. <a onclick="PAY.close();openAuth('login')" style="color:var(--cyan2);cursor:pointer">Se connecter</a> pour retrouver tes commandes.</div>
+      </div>
       <div class="pay-steplbl">Adresse de livraison</div>
       <div id="address-element"></div>
       <div class="pay-msg" id="pay-addr-msg"></div>
@@ -1079,6 +1084,11 @@ function renderCoque(d, showSVG=true){
 function renderFig(d){
   const[ccat,chov,cprice]=themeClasses(d.theme);
   const art=d._img?`<img src="${d._img}" draggable="false" style="width:100%;height:100%;object-fit:cover">`:`<div class="card-glow ${ccat}"></div>${mkFigSVG(d.id,d.theme)}`;
+  const _st=(typeof d.stock==='number')?d.stock:null;
+  const _sold=_st!==null&&_st<=0, _low=_st!==null&&_st>0&&_st<=5;
+  const _stVal=_st===null?'À la demande':(_sold?'Épuisé':(_st+(_low?' · vite !':'')));
+  const _stCol=(_sold||_low)?'var(--pink2)':'var(--fg2)';
+  const _addBtn=_sold?`<button class="btn-add" disabled style="opacity:.45;cursor:default">Épuisé</button>`:`<button class="btn-add ${ccat}" onclick="event.stopPropagation();addToCart('fig',${d.id})">Ajouter</button>`;
   return `<div class="card ${chov}" id="pf-${d.id}" style="cursor:pointer" draggable="true" ondragstart="cardDragStart(event,'fig',${d.id})" ondragend="cardDragEnd()" onclick="openProduct('fig',${d.id})">
     <div class="card-art-fig">${art}</div>
     <div class="card-body">
@@ -1089,11 +1099,11 @@ function renderFig(d){
       <div style="display:flex;gap:1.2rem;margin-bottom:.9rem">
         <div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.25em;text-transform:uppercase;color:var(--fg3)">Hauteur</span><span style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--${d.theme==='pu'?'purple2':d.theme==='c'?'cyan':'pink'})">${d.h}</span></div>
         <div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.25em;text-transform:uppercase;color:var(--fg3)">Matière</span><span style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--fg2)">${d.mat}</span></div>
-        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.25em;text-transform:uppercase;color:var(--fg3)">Stock</span><span style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--fg2)">${d.stock}</span></div>
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.25em;text-transform:uppercase;color:var(--fg3)">Stock</span><span style="font-family:'DM Mono',monospace;font-size:.78rem;color:${_stCol}">${_stVal}</span></div>
       </div>
       <div class="cfoot">
         <div class="cprice ${ccat}"><span class="curr">€</span>${d.price}</div>
-        <button class="btn-add ${ccat}" onclick="event.stopPropagation();addToCart('fig',${d.id})">Ajouter</button>
+        ${_addBtn}
       </div>
     </div>
   </div>`;
@@ -1205,9 +1215,14 @@ function cartTotalQty(){return cart.reduce((s,it)=>s+it.qty,0);}
 function cartSubtotal(){return cart.reduce((s,it)=>{const p=prodLookup(it.type,it.id);return s+(p?parseFloat(p.price):0)*it.qty;},0);}
 function updateCartBadge(){const e=document.getElementById('cartN');if(e)e.textContent=cartTotalQty();}
 
+function prodStock(p){return (p&&typeof p.stock==='number')?p.stock:Infinity;}
+function cartQty(type,id){var it=cart.find(function(c){return c.type===type&&c.id===id;});return it?it.qty:0;}
 function addToCart(type,id,qty){
   qty=qty||1;
   const p=prodLookup(type,id); if(!p)return;
+  var avail=prodStock(p), have=cartQty(type,id);
+  if(avail<=0){showToast(p.name+' est épuisé','pk');return;}
+  if(have+qty>avail){showToast('Stock insuffisant — plus que '+(avail-have)+' disponible(s)','pk');return;}
   const ex=cart.find(it=>it.type===type&&it.id===id);
   if(ex)ex.qty+=qty; else cart.push({type,id,qty});
   updateCartBadge();persistCart();fcTrack('cart',{key:type+':'+id});
@@ -1228,6 +1243,7 @@ function addCart(name,theme){
 
 function cartSetQty(type,id,delta){
   const it=cart.find(c=>c.type===type&&c.id===id); if(!it)return;
+  if(delta>0){var pp=prodLookup(type,id);if(pp&&it.qty+delta>prodStock(pp)){showToast('Stock insuffisant','pk');return;}}
   it.qty+=delta;
   if(it.qty<=0)cart=cart.filter(c=>!(c.type===type&&c.id===id));
   updateCartBadge();persistCart();renderCart();
@@ -1242,22 +1258,21 @@ function finalizeOrder(order){
   fcTrack('purchase',{amount:Math.round((order.total||0)*100),keys:(order.items||[]).map(function(i){return i.type+':'+i.id;})});
   return Promise.resolve(FC.createOrder(order)).then(function(){
     cart=[];persistCart();updateCartBadge();renderCart();
-    goto('account');
+    goto(FC.user()?'account':'home');
   });
 }
 function cartCheckout(){
   if(!cart.length){showToast('Ton panier est vide','pk');return;}
-  if(!FC.user()){showToast('Connecte-toi pour finaliser ta commande','pu');openAuth('login');return;}
   var subt=cartSubtotal();
   var ship=(subt>=50||subt===0)?0:4.90;
   var order={
     id:'FC-'+Date.now().toString(36).toUpperCase()+'-'+(Math.floor(Math.random()*900)+100),
     date:Date.now(),
     items:cart.map(function(it){var p=prodLookup(it.type,it.id);return{type:it.type,id:it.id,name:p?p.name:'Produit',price:p?parseFloat(p.price):0,qty:it.qty,theme:p?p.theme:'p'};}),
-    subtotal:subt,shipping:ship,total:subt+ship,status:'En préparation'
+    subtotal:subt,shipping:ship,total:subt+ship,status:'En préparation',guest:!FC.user()
   };
   if(typeof PAY!=='undefined'&&PAY.enabled()){PAY.open(order);return;}
-  // Repli : paiement non configuré → on enregistre la commande (mode démo)
+  order.status='Commande enregistrée (paiement non configuré)';
   finalizeOrder(order).then(function(){showToast('Commande '+order.id+' enregistrée (paiement non configuré)','cy');});
 }
 
@@ -2067,6 +2082,8 @@ var PAY = (function(){
     el('pay-btn-label').textContent='Payer €'+order.total.toFixed(2);
     el('pay-mode-note').textContent=/^pk_test/.test(STRIPE_PUBLISHABLE_KEY)?'(mode test — aucun débit réel)':'';
     el('paymentModal').classList.add('open');
+    el('pay-email-row').style.display=FC.user()?'none':'';
+    el('pay-email').value=(FC.user()&&FC.user().email)||'';
     showStep('address');setMsg('');setAddrMsg('');busy(false);busyAddr(false);
     el('address-element').innerHTML='';
     addrElements=getStripe().elements({appearance:APPEARANCE});
@@ -2076,6 +2093,9 @@ var PAY = (function(){
 
   function toPayment(){
     if(!addrEl)return;
+    var email=FC.user()?FC.user().email:el('pay-email').value.trim();
+    if(!FC.user()&&!/.+@.+\..+/.test(email)){setAddrMsg('Renseigne un e-mail valide pour le reçu.',true);el('pay-email').focus();return;}
+    currentOrder.email=email;
     busyAddr(true);setAddrMsg('Vérification de l\'adresse…');
     addrEl.getValue().then(function(r){
       if(!r.complete){setAddrMsg('Complète ton adresse de livraison.',true);busyAddr(false);return;}
@@ -2083,7 +2103,7 @@ var PAY = (function(){
       setAddrMsg('Préparation du paiement…');
       return fetch(PAYMENT_API_URL.replace(/\/$/,'')+'/create-payment-intent',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({currency:'eur',email:(FC.user()&&FC.user().email)||'',userId:(FC.user()&&FC.user().id)||'',ref:currentOrder.id,
+        body:JSON.stringify({currency:'eur',email:email,userId:(FC.user()&&FC.user().id)||'',ref:currentOrder.id,
           shipping:r.value,
           items:currentOrder.items.map(function(i){return {type:i.type,id:i.id,qty:i.qty,name:i.name};})})
       }).then(function(rp){return rp.json().then(function(d){if(!rp.ok)throw new Error(d.error||('HTTP '+rp.status));return d;});})

@@ -441,10 +441,18 @@ async function stripeWebhook(request, env, cors){
     var order = { id: ref, date: (pi.created || Math.floor(Date.now()/1000)) * 1000, status: "Payée",
       total: (pi.amount || 0) / 100, items: items, shipAddr: pi.shipping || null, email: pi.receipt_email || "", source: "webhook" };
     if(uid) await recordUserOrder(env, uid, order, true); // n'écrase pas la commande déjà enregistrée côté client
-    // alerte e-mail au vendeur — une seule fois par commande
-    var mailKey = "mailed:" + ref;
-    if(!(await env.KV.get(mailKey))){
-      await env.KV.put(mailKey, "1", { expirationTtl: 60*60*24*60 });
+    // traitement unique par commande : décrément du stock + alerte vendeur
+    var doneKey = "done:" + ref;
+    if(!(await env.KV.get(doneKey))){
+      await env.KV.put(doneKey, "1", { expirationTtl: 60*60*24*60 });
+      if(cfg && cfg.products){
+        var changed = false;
+        items.forEach(function(it){
+          var p = cfg.products[it.type + ":" + it.id];
+          if(p && typeof p.stock === "number"){ p.stock = Math.max(0, p.stock - it.qty); changed = true; }
+        });
+        if(changed) await env.KV.put("config", JSON.stringify(cfg));
+      }
       await sendSellerAlert(env, order);
     }
   }
