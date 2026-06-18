@@ -55,6 +55,8 @@ input,textarea,select{font-family:inherit}
 .nav-links a{font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg3);padding:0 1.1rem;height:58px;display:flex;align-items:center;border-bottom:2px solid transparent;transition:color .18s,border-color .18s}
 .nav-links a:hover,.nav-links a.active{color:var(--fg);border-bottom-color:var(--pink)}
 .nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.nav-burger{display:none}
+.nav-mobile-only{display:none}
 
 
 .btn-cart-nav{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;background:var(--pink);color:#fff;border:none;padding:6px 15px;border-radius:3px;transition:background .18s}
@@ -522,21 +524,50 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .cs-block{background:var(--bg3);border:1px solid var(--b2);border-radius:9px;padding:1.1rem 1.2rem;margin-bottom:1rem}
 .cs-lbl{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--fg3);margin-bottom:.4rem}
 .cs-block a{color:var(--cyan2)}
+/* ═══ MOBILE ═══ */
+@media(max-width:900px){
+  #nav{padding:0 .9rem;gap:.6rem}
+  .nav-burger{display:flex;align-items:center;justify-content:center;width:40px;height:40px;flex-shrink:0;background:transparent;border:1px solid var(--b1);border-radius:7px;color:var(--fg);font-size:1.15rem;line-height:1}
+  .nav-logo{flex:1}
+  .nav-links{position:absolute;top:58px;left:0;right:0;display:none;flex-direction:column;background:var(--bg2);border-bottom:1px solid var(--b1);padding:.3rem 0;box-shadow:0 22px 40px rgba(0,0,0,.55)}
+  .nav-links.open{display:flex}
+  .nav-links li{width:100%}
+  .nav-links a{height:auto;width:100%;padding:15px 1.3rem;justify-content:flex-start;border-bottom:1px solid var(--b2);border-left:3px solid transparent;font-size:.82rem}
+  .nav-links a.active{color:var(--fg);border-left-color:var(--pink)}
+  .nav-mobile-only{display:block}
+  #nav .btn-play-nav,#nav .btn-account-nav{display:none}
+  .btn-cart-nav{padding:8px 13px}
+  .section{padding-left:1.1rem;padding-right:1.1rem}
+  .hero-content{padding:2.4rem 1.1rem 2rem}
+  .page-hdr{padding:1.8rem 1.1rem 0}
+  .page-hdr-row{flex-direction:column;align-items:flex-start;gap:.5rem}
+  .sec-head{flex-wrap:wrap;gap:.6rem}
+  .cta-band{margin:0 1.1rem 3rem;padding:1.8rem 1.3rem;grid-template-columns:1fr;gap:1.3rem}
+  footer{padding:1.5rem 1.1rem;gap:1rem}
+  .contact-wrap{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .hero-h1{font-size:3.3rem}
+  .sec-h2{font-size:2rem}
+}
 </style>
 </head>
 <body>
 
 <!-- NAV -->
 <nav id="nav">
+  <button class="nav-burger" id="navBurger" onclick="toggleNavMenu()" aria-label="Menu">☰</button>
   <a class="nav-logo" onclick="goto('home')">
     <span class="nav-logo-main">FLAMECRAFT</span>
     <span class="nav-logo-sub">Coques &amp; Figurines 3D</span>
   </a>
-  <ul class="nav-links">
+  <ul class="nav-links" id="navLinks">
     <li><a data-page="home" onclick="goto('home')">Accueil</a></li>
     <li><a data-page="coques" onclick="goto('coques')">Coques</a></li>
     <li><a data-page="figurines" onclick="goto('figurines')">Figurines</a></li>
     <li><a data-page="custom" onclick="goto('custom')">Sur-mesure</a></li>
+    <li class="nav-mobile-only"><a onclick="GAME.open();closeNavMenu()">▶ Jouer</a></li>
+    <li class="nav-mobile-only"><a onclick="accountNavClick();closeNavMenu()">Mon compte</a></li>
   </ul>
   <div class="nav-right">
     <button class="btn-play-nav" onclick="GAME.open()">▶ Jouer</button>
@@ -1187,7 +1218,10 @@ function renderFigsPage(){
 }
 
 // ═══ NAVIGATION ═══
+function toggleNavMenu(){var n=document.getElementById('navLinks');if(!n)return;var o=n.classList.toggle('open');var b=document.getElementById('navBurger');if(b)b.textContent=o?'✕':'☰';}
+function closeNavMenu(){var n=document.getElementById('navLinks');if(n)n.classList.remove('open');var b=document.getElementById('navBurger');if(b)b.textContent='☰';}
 function goto(page){
+  closeNavMenu();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('#page-'+page+' .reveal').forEach(function(e){e.classList.add('in');});
