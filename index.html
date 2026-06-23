@@ -584,7 +584,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     <section class="hero">
       <div class="hero-bg"></div><div class="hero-grid"></div><div class="hero-glow"></div>
       <div class="hero-content">
-        <div class="eyebrow" id="h-eye">Drop 003 — Printemps 2025</div>
+        <div class="eyebrow" id="h-eye">Drop 003 — Été 2026</div>
         <div class="hero-h1">
           <div class="h1-white" id="h-l1">DARK</div>
           <div class="h1-pink" id="h-l2">KAWAII</div>
@@ -650,7 +650,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     <footer>
       <div class="footer-logo" id="f-logo">FLAMECRAFT</div>
       <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
-      <div class="footer-copy">© 2025 Flamecraft — Bretagne, France</div>
+      <div class="footer-copy">© 2026 Flamecraft — Bretagne, France</div>
     </footer>
   </div>
 
@@ -703,7 +703,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
       <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
-      <div class="footer-copy">© 2025 Flamecraft</div>
+      <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
 
@@ -759,7 +759,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
       <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
-      <div class="footer-copy">© 2025 Flamecraft</div>
+      <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
 
@@ -797,21 +797,24 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
         <div style="background:var(--bg3);border:1px solid var(--b2);border-radius:6px;padding:2rem">
           <div class="sec-tag" style="margin-bottom:.4rem">Contact</div>
           <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;margin-bottom:1.5rem">Demande de devis</div>
-          <div style="display:flex;flex-direction:column;gap:1rem">
-            <div><div class="ed-lbl" style="margin-bottom:5px">Ton prénom</div><input class="ed-inp" placeholder="Ex : Alex" style="width:100%"></div>
+          <form onsubmit="return submitDevis(event)" style="display:flex;flex-direction:column;gap:1rem">
+            <div><div class="ed-lbl" style="margin-bottom:5px">Ton prénom</div><input id="dv-name" class="ed-inp" placeholder="Ex : Alex" style="width:100%" autocomplete="name"></div>
+            <div><div class="ed-lbl" style="margin-bottom:5px">Ton e-mail</div><input id="dv-email" type="email" class="ed-inp" placeholder="Pour qu'on puisse te répondre" style="width:100%" autocomplete="email"></div>
             <div><div class="ed-lbl" style="margin-bottom:5px">Type de commande</div>
-              <select class="ed-sel" style="width:100%"><option>Coque briquet personnalisée</option><option>Figurine sur-mesure</option><option>Lot de coques</option><option>Autre</option></select>
+              <select id="dv-type" class="ed-sel" style="width:100%"><option>Coque briquet personnalisée</option><option>Figurine sur-mesure</option><option>Lot de coques</option><option>Autre</option></select>
             </div>
-            <div><div class="ed-lbl" style="margin-bottom:5px">Décris ton idée</div><textarea class="ed-inp ed-ta" style="width:100%;min-height:80px" placeholder="Couleur, motif, taille, compatible avec..."></textarea></div>
-            <button class="btn-solid" onclick="showToast('Message envoyé !','cy')" style="width:100%;justify-content:center">Envoyer la demande</button>
-          </div>
+            <div><div class="ed-lbl" style="margin-bottom:5px">Décris ton idée</div><textarea id="dv-msg" class="ed-inp ed-ta" style="width:100%;min-height:80px" placeholder="Couleur, motif, taille, compatible avec..."></textarea></div>
+            <input id="dv-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+            <div id="dv-status" style="min-height:1rem;font-family:'DM Mono',monospace;font-size:.7rem;color:var(--fg3)"></div>
+            <button class="btn-solid" type="submit" id="dv-btn" style="width:100%;justify-content:center">Envoyer la demande</button>
+          </form>
         </div>
       </div>
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
       <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
-      <div class="footer-copy">© 2025 Flamecraft</div>
+      <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
 
@@ -829,7 +832,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
       <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
-      <div class="footer-copy">© 2025 Flamecraft</div>
+      <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
 
@@ -849,7 +852,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
       <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
-      <div class="footer-copy">© 2025 Flamecraft</div>
+      <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
 
@@ -870,7 +873,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
         <p>Envoie-nous ton design, ton pseudo, ou juste une ambiance — on le transforme en objet réel. <a onclick="goto('custom')" style="color:var(--cyan2);cursor:pointer">Demander un devis ↗</a></p>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2025 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
   <!-- FAQ -->
@@ -887,7 +890,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
         <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Le paiement est-il sécurisé ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Oui : paiement géré par Stripe (carte bancaire, Apple Pay, Google Pay, PayPal). Tes coordonnées bancaires ne transitent jamais par notre site.</p></div></div>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2025 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
   <!-- CONTACT -->
@@ -913,7 +916,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
         </div>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2025 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
 </div><!-- /main -->
@@ -1249,6 +1252,44 @@ function cartTotalQty(){return cart.reduce((s,it)=>s+it.qty,0);}
 function cartSubtotal(){return cart.reduce((s,it)=>{const p=prodLookup(it.type,it.id);return s+(p?parseFloat(p.price):0)*it.qty;},0);}
 function updateCartBadge(){const e=document.getElementById('cartN');if(e)e.textContent=cartTotalQty();}
 
+// ── Code promo (validé côté Worker, appliqué au panier) ──
+let appliedPromo=null; // {code,type,value,min}
+function promoLabel(p){if(!p)return '';if(p.type==='percent')return '−'+(+p.value)+' %';if(p.type==='amount')return '−€'+(+p.value).toFixed(2);if(p.type==='shipping')return 'Livraison offerte';return '';}
+function promoEffect(subt){
+  if(!appliedPromo)return {discount:0,freeShip:false};
+  if(appliedPromo.min&&subt<appliedPromo.min)return {discount:0,freeShip:false};
+  if(appliedPromo.type==='shipping')return {discount:0,freeShip:true};
+  if(appliedPromo.type==='percent')return {discount:subt*Math.max(0,Math.min(100,appliedPromo.value))/100,freeShip:false};
+  if(appliedPromo.type==='amount')return {discount:Math.min(subt,appliedPromo.value),freeShip:false};
+  return {discount:0,freeShip:false};
+}
+function promoBlockHTML(){
+  if(appliedPromo){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:.6rem 0;padding:7px 11px;border:1px solid rgba(0,216,200,.3);border-radius:4px;background:var(--cyanA)">'+
+      '<span style="font-family:\'DM Mono\',monospace;font-size:.66rem;color:var(--cyan2)">✓ '+escHTML(appliedPromo.code)+' · '+promoLabel(appliedPromo)+'</span>'+
+      '<button onclick="removePromo()" style="background:none;border:none;color:var(--fg3);font-family:\'DM Mono\',monospace;font-size:.58rem;text-decoration:underline;cursor:pointer">retirer</button></div>';
+  }
+  return '<div style="display:flex;gap:6px;margin:.6rem 0 .2rem">'+
+    '<input id="promo-inp" placeholder="Code promo" onkeydown="if(event.key===\'Enter\'){event.preventDefault();applyPromo();}" style="flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--b1);color:var(--fg);padding:8px 10px;border-radius:4px;font-family:\'DM Mono\',monospace;font-size:.72rem;outline:none;text-transform:uppercase">'+
+    '<button onclick="applyPromo()" style="background:var(--cyanA);color:var(--cyan2);border:1px solid rgba(0,216,200,.35);border-radius:4px;padding:8px 12px;font-family:\'DM Mono\',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap">Appliquer</button></div>'+
+    '<div id="promo-msg" style="min-height:.9rem;font-family:\'DM Mono\',monospace;font-size:.58rem;color:var(--fg3);margin-bottom:.3rem"></div>';
+}
+function applyPromo(){
+  var inp=document.getElementById('promo-inp');if(!inp)return;
+  var code=inp.value.trim();var st=document.getElementById('promo-msg');
+  if(!code){if(st){st.style.color='var(--pink2)';st.textContent='Entre un code.';}return;}
+  var base=fcApiBase();if(!base){if(st){st.style.color='var(--pink2)';st.textContent='Service indisponible.';}return;}
+  if(st){st.style.color='var(--fg3)';st.textContent='Vérification…';}
+  fetch(base+'/promo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.valid){appliedPromo=null;if(st){st.style.color='var(--pink2)';st.textContent='Code invalide ou expiré.';}return;}
+      appliedPromo={code:d.code,type:d.type,value:d.value,min:d.min||0};
+      if(appliedPromo.min&&cartSubtotal()<appliedPromo.min){var need=appliedPromo.min;appliedPromo=null;renderCart();showToast('Ce code demande un panier d\'au moins €'+need.toFixed(2),'pk');return;}
+      showToast('Code appliqué : '+promoLabel({type:d.type,value:d.value}),'cy');renderCart();
+    }).catch(function(){if(st){st.style.color='var(--pink2)';st.textContent='Erreur de vérification.';}});
+}
+function removePromo(){appliedPromo=null;renderCart();showToast('Code retiré','pk');}
+
 function prodStock(p){return (p&&typeof p.stock==='number')?p.stock:Infinity;}
 function cartQty(type,id){var it=cart.find(function(c){return c.type===type&&c.id===id;});return it?it.qty:0;}
 function addToCart(type,id,qty){
@@ -1298,12 +1339,14 @@ function finalizeOrder(order){
 function cartCheckout(){
   if(!cart.length){showToast('Ton panier est vide','pk');return;}
   var subt=cartSubtotal();
-  var ship=(subt>=50||subt===0)?0:4.90;
+  var pe=promoEffect(subt);
+  var disc=pe.discount, discSubt=subt-disc;
+  var ship=(pe.freeShip||discSubt>=50||subt===0)?0:4.90;
   var order={
     id:'FC-'+Date.now().toString(36).toUpperCase()+'-'+(Math.floor(Math.random()*900)+100),
     date:Date.now(),
     items:cart.map(function(it){var p=prodLookup(it.type,it.id);return{type:it.type,id:it.id,name:p?p.name:'Produit',price:p?parseFloat(p.price):0,qty:it.qty,theme:p?p.theme:'p'};}),
-    subtotal:subt,shipping:ship,total:subt+ship,status:'En préparation',guest:!FC.user()
+    subtotal:subt,discount:disc,promo:appliedPromo?appliedPromo.code:'',shipping:ship,total:discSubt+ship,status:'En préparation',guest:!FC.user()
   };
   if(typeof PAY!=='undefined'&&PAY.enabled()){PAY.open(order);return;}
   order.status='Commande enregistrée (paiement non configuré)';
@@ -1350,16 +1393,21 @@ function renderCart(){
     </div>`;
   }).join('');
   const subt=cartSubtotal();
-  const ship=(subt>=50||subt===0)?0:4.90;
-  const total=subt+ship;
+  const pe=promoEffect(subt);
+  const disc=pe.discount;
+  const discSubt=subt-disc;
+  const ship=(pe.freeShip||discSubt>=50||subt===0)?0:4.90;
+  const total=discSubt+ship;
   const n=cartTotalQty();
   wrap.innerHTML=`<div class="cart-wrap">
     <div class="cart-items">${items}</div>
     <div class="cart-summary">
       <div class="cs-title">Récapitulatif</div>
       <div class="cs-row"><span>Sous-total (${n} article${n>1?'s':''})</span><span class="csv">€${subt.toFixed(2)}</span></div>
-      <div class="cs-row"><span>Livraison</span><span class="csv">${ship===0?'Offerte':'€'+ship.toFixed(2)}</span></div>
-      ${ship>0?`<div class="cs-ship">Plus que €${(50-subt).toFixed(2)} pour la livraison offerte</div>`:''}
+      ${disc>0?`<div class="cs-row" style="color:var(--cyan2)"><span>Code ${escHTML(appliedPromo.code)} (${promoLabel(appliedPromo)})</span><span class="csv">−€${disc.toFixed(2)}</span></div>`:''}
+      <div class="cs-row"><span>Livraison</span><span class="csv">${ship===0?(pe.freeShip&&discSubt<50?'Offerte (code)':'Offerte'):'€'+ship.toFixed(2)}</span></div>
+      ${ship>0?`<div class="cs-ship">Plus que €${(50-discSubt).toFixed(2)} pour la livraison offerte</div>`:''}
+      ${promoBlockHTML()}
       <div class="cs-total"><span class="cs-total-l">Total</span><span class="cs-total-v">€${total.toFixed(2)}</span></div>
       <button class="btn-solid" style="width:100%;justify-content:center;margin-top:1.2rem" onclick="cartCheckout()">Passer commande ↗</button>
       <button class="btn-outline" style="width:100%;justify-content:center;margin-top:.5rem" onclick="goto('coques')">Continuer mes achats</button>
@@ -2089,6 +2137,7 @@ function renderOrderCard(o){
     '<span class="ord-date">'+d+'</span>'+
     '<span class="ord-status">'+escHTML(o.status||'')+'</span></div>'+
     '<div class="ord-lines">'+lines+'</div>'+saHtml+
+    (o.discount?'<div class="ord-ship">Code '+escHTML(o.promo||'')+' : −€'+(+o.discount).toFixed(2)+'</div>':'')+
     '<div class="ord-foot"><span>'+(o.shipping?('Livraison €'+o.shipping.toFixed(2)):'Livraison offerte')+'</span>'+
     '<span class="ord-total">Total €'+(o.total||0).toFixed(2)+'</span></div></div>';
 }
@@ -2144,10 +2193,13 @@ var PAY = (function(){
       return fetch(PAYMENT_API_URL.replace(/\/$/,'')+'/create-payment-intent',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({currency:'eur',email:email,userId:(FC.user()&&FC.user().id)||'',ref:currentOrder.id,
+          promo:currentOrder.promo||'',
           shipping:r.value,
           items:currentOrder.items.map(function(i){return {type:i.type,id:i.id,qty:i.qty,name:i.name};})})
       }).then(function(rp){return rp.json().then(function(d){if(!rp.ok)throw new Error(d.error||('HTTP '+rp.status));return d;});})
-      .then(function(d){if(!d.clientSecret)throw new Error('Réponse invalide du serveur de paiement');mountElements(d.clientSecret);showStep('payment');setAddrMsg('');busyAddr(false);});
+      .then(function(d){if(!d.clientSecret)throw new Error('Réponse invalide du serveur de paiement');
+        if(typeof d.amount==='number'){var amtTxt='€'+(d.amount/100).toFixed(2);el('pay-amount').textContent=amtTxt;el('pay-btn-label').textContent='Payer '+amtTxt;}
+        mountElements(d.clientSecret);showStep('payment');setAddrMsg('');busyAddr(false);});
     }).catch(function(e){setAddrMsg('Erreur : '+(e.message||e),true);busyAddr(false);});
   }
   function back(){showStep('address');}
@@ -2290,6 +2342,25 @@ function submitContact(ev){
   fetch(base+'/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,email:email,message:msg,website:hp})})
     .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'Erreur');return d;});})
     .then(function(){st.style.color='var(--cyan2)';st.textContent='Message envoyé — merci, on revient vers toi vite !';document.getElementById('ct-name').value='';document.getElementById('ct-email').value='';document.getElementById('ct-msg').value='';})
+    .catch(function(e){st.style.color='var(--pink2)';st.textContent='Échec : '+(e.message||e);})
+    .then(function(){btn.disabled=false;});
+  return false;
+}
+function submitDevis(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  var name=document.getElementById('dv-name').value.trim();
+  var email=document.getElementById('dv-email').value.trim();
+  var type=document.getElementById('dv-type').value;
+  var idea=document.getElementById('dv-msg').value.trim();
+  var hp=document.getElementById('dv-website').value;
+  var st=document.getElementById('dv-status'),btn=document.getElementById('dv-btn');
+  if(!/.+@.+\..+/.test(email)||idea.length<5){st.style.color='var(--pink2)';st.textContent='Renseigne un e-mail valide et décris ton idée (5 caractères min).';return false;}
+  var base=fcApiBase();if(!base){st.style.color='var(--pink2)';st.textContent='Service indisponible pour le moment.';return false;}
+  var fullMsg='Demande de devis — '+type+'\n\n'+idea;
+  btn.disabled=true;st.style.color='var(--fg3)';st.textContent='Envoi…';
+  fetch(base+'/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name||'(sans nom)',email:email,message:fullMsg,website:hp})})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'Erreur');return d;});})
+    .then(function(){st.style.color='var(--cyan2)';st.textContent='Demande envoyée — on te répond très vite !';document.getElementById('dv-name').value='';document.getElementById('dv-email').value='';document.getElementById('dv-msg').value='';})
     .catch(function(e){st.style.color='var(--pink2)';st.textContent='Échec : '+(e.message||e);})
     .then(function(){btn.disabled=false;});
   return false;

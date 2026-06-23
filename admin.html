@@ -182,6 +182,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
       <button class="nav-it" data-sec="content"><span class="nav-ico">✎</span><span>Contenu</span></button>
       <button class="nav-it" data-sec="orders"><span class="nav-ico">▦</span><span>Commandes</span></button>
       <button class="nav-it" data-sec="analytics"><span class="nav-ico">◔</span><span>Analytics</span></button>
+      <button class="nav-it" data-sec="promos"><span class="nav-ico">%</span><span>Codes promo</span></button>
       <button class="nav-it" data-sec="settings"><span class="nav-ico">⚙</span><span>Réglages</span></button>
     </nav>
     <div class="side-foot">
@@ -314,6 +315,13 @@ tr:hover td{background:rgba(255,255,255,.015)}
         </div>
       </section>
 
+      <!-- PROMOS -->
+      <section class="section" id="sec-promos">
+        <div class="hint" style="margin-bottom:1.1rem">Crée des codes promo pour le panier. <b>Type</b> : « % du panier » (réduction en pourcentage), « Montant € fixe » (ex. 5 €), ou « Livraison offerte ». <b>Panier min</b> : montant minimum requis (0 = aucun). Décoche « Actif » pour désactiver un code sans le supprimer. La réduction est revérifiée côté serveur au paiement. Clique « Publier » pour appliquer.</div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem"><button class="btn btn-cyan btn-sm" onclick="addPromo()">+ Nouveau code</button></div>
+        <div class="card"><div id="promoList"></div></div>
+      </section>
+
       <!-- SETTINGS -->
       <section class="section" id="sec-settings">
         <div class="card" style="max-width:620px">
@@ -368,14 +376,14 @@ const DEFAULT_FIGS = [
   {id:2,name:'Robo Chibi',cat:'Tech kawaii',desc:'Robot kawaii avec tête-écran translucide. Édition collab exclusive.',price:'26.00',badge:'col',theme:'c',h:'8 cm',mat:'PETG Fumé',stock:35},
   {id:3,name:'Dark Elf #03',cat:'Dark fantasy',desc:'Elfe ténébreux aux oreilles pointues. Peint à la main. Limité 15 pièces.',price:'38.00',badge:'lim',theme:'pu',h:'10 cm',mat:'Résine UV',stock:15}
 ];
-const DEFAULT_CONTENT = {eyebrow:'Drop 003 — Printemps 2025',h1:'DARK',h2:'KAWAII',h3:'CRAFT',
+const DEFAULT_CONTENT = {eyebrow:'Drop 003 — Été 2026',h1:'DARK',h2:'KAWAII',h3:'CRAFT',
   desc:"Coques et figurines imprimées à la main, pièce par pièce. Entre l'obscurité et le mignon. Entre le réel et le pixel.",
   btn1:'Voir les coques ↗',btn2:'Figurines',siteName:'FLAMECRAFT',siteSub:'Coques & Figurines 3D',instagram:'',etsy:''};
 const BADGES={'':'Aucun','new':'Nouveau','lim':'Limité','col':'Collab'};
 
 // ═══════════ ÉTAT ═══════════
 let TOKEN = sessionStorage.getItem('fc_admin_tok') || '';
-let state = { coques:[], figs:[], content:{}, settings:{}, dirty:false };
+let state = { coques:[], figs:[], content:{}, settings:{}, promos:[], dirty:false };
 let stats = null, orders = null;
 
 function key(type,id){return type+':'+id;}
@@ -432,6 +440,7 @@ function loadConfig(){
   state.coques=clone(DEFAULT_COQUES);
   state.figs=clone(DEFAULT_FIGS);
   state.content=clone(DEFAULT_CONTENT);
+  state.promos=[];
   return fetch(API_BASE.replace(/\/$/,'')+'/config?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
     if(cfg&&cfg.products){
       Object.keys(cfg.products).forEach(function(k){
@@ -443,8 +452,11 @@ function loadConfig(){
     }
     if(cfg&&cfg.content)Object.assign(state.content,cfg.content);
     if(cfg&&cfg.settings)state.settings=cfg.settings;
+  }).catch(function(){}).then(function(){
+    return api('/admin/promos').then(function(d){state.promos=Array.isArray(d.promos)?d.promos:[];}).catch(function(){state.promos=[];});
+  }).then(function(){
     state.dirty=false;refreshAll();
-  }).catch(function(){refreshAll();});
+  });
 }
 function markDirty(){state.dirty=true;document.getElementById('pubBar').classList.add('on');}
 function discardChanges(){loadConfig();document.getElementById('pubBar').classList.remove('on');toast('Modifications annulées');}
@@ -452,7 +464,7 @@ function buildConfig(){
   var products={};
   state.coques.forEach(function(p){products[key('coque',p.id)]=p;});
   state.figs.forEach(function(p){products[key('fig',p.id)]=p;});
-  return {products:products,content:state.content,settings:state.settings};
+  return {products:products,content:state.content,settings:state.settings,promos:state.promos};
 }
 function publish(){
   api('/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildConfig())})
@@ -467,7 +479,7 @@ function resetConfig(){
     .catch(function(e){toast('Erreur : '+e.message,'bad');});
 }
 
-function refreshAll(){renderProducts();fillContent();fillStudioSelect();renderKpis();renderDiag();}
+function refreshAll(){renderProducts();renderPromos();fillContent();fillStudioSelect();renderKpis();renderDiag();}
 
 // ═══════════ NAV ═══════════
 document.getElementById('nav').addEventListener('click',function(e){
@@ -623,6 +635,36 @@ function drModelFile(input){var f=input.files[0];if(!f)return;var p=findP(drawer
   uploadAsset(p,drawerCtx.type,drawerCtx.id,f,'model').then(function(){drAssets();renderProducts();fillStudioSelect();toast('Modèle 3D importé — publie pour l\'appliquer','ok');}).catch(function(e){if(e)toast('Erreur : '+(e.message||e),'bad');});}
 function drClearImg(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p._img)return;var k=p._img.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});p._img='';markDirty();drAssets();renderProducts();toast('Image retirée');}
 function drClearModel(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p.model)return;var k=p.model.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});p.model='';markDirty();drAssets();renderProducts();fillStudioSelect();toast('Modèle retiré');}
+
+// ═══════════ CODES PROMO ═══════════
+function renderPromos(){
+  var wrap=document.getElementById('promoList');if(!wrap)return;
+  if(!state.promos.length){wrap.innerHTML='<div class="muted mono" style="font-size:.66rem">Aucun code promo. Clique « + Nouveau code » pour en créer un.</div>';return;}
+  var rows=state.promos.map(function(p,i){
+    var typeSel='<select class="f-inp" style="padding:5px 7px;font-size:.72rem" onchange="promoEdit('+i+',\'type\',this.value)">'+
+      [['percent','% du panier'],['amount','Montant € fixe'],['shipping','Livraison offerte']].map(function(t){return '<option value="'+t[0]+'"'+(p.type===t[0]?' selected':'')+'>'+t[1]+'</option>';}).join('')+'</select>';
+    var valUnit=p.type==='percent'?'%':(p.type==='amount'?'€':'—');
+    var valDis=p.type==='shipping'?' disabled':'';
+    return '<tr>'+
+      '<td><input class="f-inp" style="padding:5px 7px;font-size:.72rem;text-transform:uppercase;width:130px" value="'+esc(p.code)+'" onchange="promoEdit('+i+',\'code\',this.value)"></td>'+
+      '<td>'+typeSel+'</td>'+
+      '<td><input class="f-inp" type="number" min="0" step="0.5" style="padding:5px 7px;font-size:.72rem;width:80px" value="'+esc(p.value)+'"'+valDis+' onchange="promoEdit('+i+',\'value\',this.value)"> <span class="muted mono" style="font-size:.58rem">'+valUnit+'</span></td>'+
+      '<td><input class="f-inp" type="number" min="0" step="1" style="padding:5px 7px;font-size:.72rem;width:70px" value="'+esc(p.min||0)+'" onchange="promoEdit('+i+',\'min\',this.value)"></td>'+
+      '<td><label class="chk"><input type="checkbox"'+(p.active!==false?' checked':'')+' onchange="promoEdit('+i+',\'active\',this.checked)"></label></td>'+
+      '<td><button class="btn btn-ghost btn-sm" style="color:var(--pink2)" onclick="promoDelete('+i+')">Suppr.</button></td>'+
+    '</tr>';
+  }).join('');
+  wrap.innerHTML='<table><thead><tr><th>Code</th><th>Type</th><th>Valeur</th><th>Panier min €</th><th>Actif</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function promoEdit(i,field,val){
+  if(!state.promos[i])return;
+  if(field==='value'||field==='min')val=Math.max(0,parseFloat(val)||0);
+  if(field==='code')val=String(val).trim();
+  state.promos[i][field]=val;markDirty();
+  if(field==='type')renderPromos();
+}
+function promoDelete(i){if(!confirm('Supprimer ce code promo ?'))return;state.promos.splice(i,1);markDirty();renderPromos();}
+function addPromo(){state.promos.push({code:'NOUVEAU',type:'percent',value:10,min:0,active:true});markDirty();renderPromos();}
 
 // ═══════════ CONTENU ═══════════
 function fillContent(){

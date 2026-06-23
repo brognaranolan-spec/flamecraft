@@ -70,6 +70,9 @@ export default {
       if (request.method === "POST" && path === "/contact") {
         return contactForm(request, env, cors);
       }
+      if (request.method === "POST" && path === "/promo") {
+        return checkPromo(request, env, cors);
+      }
       if (request.method === "GET" && path.startsWith("/model/")) {
         return getModel(env, decodeURIComponent(path.slice("/model/".length)), cors);
       }
@@ -94,6 +97,7 @@ export default {
         if (request.method === "POST" && path === "/admin/config") return saveConfig(request, env, cors);
         if (request.method === "GET" && path === "/admin/stats") return getStats(env, cors);
         if (request.method === "GET" && path === "/admin/orders") return getOrders(env, cors);
+        if (request.method === "GET" && path === "/admin/promos") return getPromos(env, cors);
         if (request.method === "POST" && path.startsWith("/admin/model/")) {
           return putModel(request, env, decodeURIComponent(path.slice("/admin/model/".length)), cors);
         }
@@ -145,9 +149,13 @@ async function createPaymentIntent(request, env, cors) {
     subtotal += price * qty;
     summary.push(key + "x" + qty);
   }
-  const shipping = (subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0) ? 0 : SHIPPING_FEE;
-  const amount = subtotal + shipping;
-  if (amount < 50 || amount > 500000) return json({ error: "Montant hors limites" }, 400, cors);
+  // Réduction (code promo validé côté serveur)
+  const promo = await findPromo(env, body.promo);
+  const dd = computeDiscount(promo, subtotal);
+  const discSubtotal = subtotal - dd.discount;
+  const shipping = (dd.freeShip || discSubtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0) ? 0 : SHIPPING_FEE;
+  const amount = discSubtotal + shipping;
+  if (amount < 50 || amount > 500000) return json({ error: "Montant hors limites (vérifie le code promo)" }, 400, cors);
 
   const form = new URLSearchParams();
   form.set("amount", String(amount));
@@ -157,6 +165,7 @@ async function createPaymentIntent(request, env, cors) {
   if (body.ref) form.set("metadata[ref]", String(body.ref).slice(0, 100));
   form.set("metadata[items]", summary.join(",").slice(0, 480));
   if (body.userId) form.set("metadata[userId]", String(body.userId).slice(0, 60));
+  if (promo) form.set("metadata[promo]", String(promo.code).slice(0, 40));
 
   // Adresse de livraison → attachée au PaymentIntent (visible Stripe + dashboard)
   const sh = body.shipping;
@@ -193,6 +202,16 @@ async function saveConfig(request, env, cors) {
     settings: (body.settings && typeof body.settings === "object") ? body.settings : {},
     updatedAt: Date.now()
   };
+  if (Array.isArray(body.promos)) {
+    const promos = body.promos.filter(function(p){ return p && p.code; }).map(function(p){ return {
+      code: String(p.code).trim().slice(0, 40),
+      type: (p.type === "percent" || p.type === "amount" || p.type === "shipping") ? p.type : "percent",
+      value: Math.max(0, parseFloat(p.value) || 0),
+      min: Math.max(0, parseFloat(p.min) || 0),
+      active: p.active !== false
+    }; });
+    await env.KV.put("promos", JSON.stringify(promos));
+  }
   await env.KV.put("config", JSON.stringify(cfg));
   return json({ ok: true, updatedAt: cfg.updatedAt }, 200, cors);
 }
@@ -232,6 +251,8 @@ function emptyStats() { return { totals: { views: 0, products: 0, carts: 0, purc
 
 async function track(request, env, cors) {
   if (!env.KV) return json({ ok: true, skipped: "no-kv" }, 200, cors);
+  // Anti-abus : au-delà de 120 events/min/IP, on ignore silencieusement (stats non gonflables)
+  if (await rateLimited(env, request.headers.get("CF-Connecting-IP") || "", "track", 120, 60)) return json({ ok: true, skipped: "rate" }, 200, cors);
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: "JSON invalide" }, 400, cors); }
   const ev = String(body.event || "");
@@ -298,6 +319,37 @@ async function getOrders(env, cors) {
     };
   });
   return json({ orders }, 200, cors, { "Cache-Control": "no-store" });
+}
+
+// ───────────────────────── Codes promo ─────────────────────────
+// Stockés dans le KV sous la clé "promos" (jamais exposés par /config).
+// Un promo = { code, type:"percent"|"amount"|"shipping", value, min, active }.
+async function findPromo(env, code){
+  if (!code || !env.KV) return null;
+  const list = await env.KV.get("promos", { type: "json" });
+  if (!Array.isArray(list)) return null;
+  const c = String(code).trim().toUpperCase();
+  return list.find(function(p){ return p && p.active !== false && String(p.code || "").trim().toUpperCase() === c; }) || null;
+}
+function computeDiscount(promo, subtotalCents){
+  if (!promo) return { discount: 0, freeShip: false };
+  if (promo.min && subtotalCents < Math.round(promo.min * 100)) return { discount: 0, freeShip: false };
+  if (promo.type === "shipping") return { discount: 0, freeShip: true };
+  if (promo.type === "percent") { var pct = Math.max(0, Math.min(100, promo.value)); return { discount: Math.round(subtotalCents * pct / 100), freeShip: false }; }
+  if (promo.type === "amount") return { discount: Math.min(subtotalCents, Math.round(promo.value * 100)), freeShip: false };
+  return { discount: 0, freeShip: false };
+}
+async function checkPromo(request, env, cors){
+  if (await rateLimited(env, request.headers.get("CF-Connecting-IP") || "", "promo", 30, 300)) return json({ valid: false, error: "Trop d'essais" }, 429, cors);
+  let body; try { body = await request.json(); } catch (e) { return json({ valid: false }, 200, cors); }
+  const p = await findPromo(env, body.code);
+  if (!p) return json({ valid: false }, 200, cors, { "Cache-Control": "no-store" });
+  return json({ valid: true, code: p.code, type: p.type, value: p.value, min: p.min || 0 }, 200, cors, { "Cache-Control": "no-store" });
+}
+async function getPromos(env, cors){
+  if (!env.KV) return json({ error: "KV non lié" }, 500, cors);
+  const list = await env.KV.get("promos", { type: "json" });
+  return json({ promos: Array.isArray(list) ? list : [] }, 200, cors, { "Cache-Control": "no-store" });
 }
 
 // ───────────────────────── Auth (comptes clients) ─────────────────────────
