@@ -148,6 +148,9 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .pc-thumb{height:96px;background-size:cover;background-position:center;border-bottom:1px solid var(--b2)}
 .chk{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--fg2);cursor:pointer;user-select:none}
 .chk input{width:16px;height:16px;accent-color:var(--pink)}
+/* Mobile : champ < 16px = zoom auto iOS au focus → on force 16px */
+@media(max-width:760px){.f-inp{font-size:16px}}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </style>
 </head>
 <body>

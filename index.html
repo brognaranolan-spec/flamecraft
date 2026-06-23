@@ -2,7 +2,35 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script>
+/* Détection appareil (PC / Android / iOS) → classes sur <html>, appliquées AVANT le rendu (zéro flash).
+   .m = mode mobile (refonte app) · .d = desktop · .is-ios / .is-android / .is-touch = précisions */
+(function(){
+  var ua=navigator.userAgent||'';
+  var isIOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var isAndroid=/Android/.test(ua);
+  var isTouch=('ontouchstart'in window)||navigator.maxTouchPoints>0;
+  var uaMobile=/Mobi|Android|iPhone|iPod|Windows Phone/i.test(ua)||isIOS;
+  var d=document.documentElement;
+  d.classList.toggle('is-ios',isIOS);
+  d.classList.toggle('is-android',isAndroid);
+  d.classList.toggle('is-touch',isTouch);
+  function apply(){
+    var w=window.innerWidth||document.documentElement.clientWidth||0;
+    var h=window.innerHeight||document.documentElement.clientHeight||0;
+    // largeur inconnue (0) → on ne force PAS mobile sur la largeur : on s'en remet à l'UA / au tactile
+    var mobile=uaMobile||(isTouch&&w>0&&Math.min(w,h)<=820)||(w>0&&w<=760);
+    d.classList.toggle('m',mobile);
+    d.classList.toggle('d',!mobile);
+  }
+  apply();
+  window.addEventListener('resize',apply,{passive:true});
+  window.addEventListener('orientationchange',apply,{passive:true});
+  document.addEventListener('DOMContentLoaded',apply);
+  window.addEventListener('load',apply);
+})();
+</script>
 <title>FLAMECRAFT — Coques de briquet &amp; figurines 3D faites main</title>
 <meta name="description" content="Coques de briquet et figurines imprimées en 3D, faites main en Bretagne. Dark kawaii, éditions limitées, personnalisation sur-mesure.">
 <meta name="theme-color" content="#080614">
@@ -550,6 +578,51 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
   .hero-h1{font-size:3.3rem}
   .sec-h2{font-size:2rem}
 }
+
+/* ═══════════ MODE MOBILE — refonte façon app (html.m) ═══════════ */
+:root{--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px)}
+/* Barre de navigation basse (bottom-nav) */
+#mnav{display:none}
+html.m #mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:350;background:rgba(10,7,22,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--b1);padding-bottom:var(--safe-b)}
+html.m .mnav-it{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:56px;color:var(--fg3);text-decoration:none;position:relative;-webkit-tap-highlight-color:transparent;transition:color .15s}
+html.m .mnav-it.active{color:var(--pink)}
+html.m .mnav-it.active .mnav-ic{filter:drop-shadow(0 0 7px rgba(255,32,96,.65))}
+.mnav-ic{line-height:0}
+.mnav-ic svg{width:22px;height:22px;display:block}
+.mnav-lb{font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.05em;text-transform:uppercase}
+.mnav-badge{position:absolute;top:6px;left:calc(50% + 5px);min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--pink);color:#fff;font-family:'DM Mono',monospace;font-size:.5rem;line-height:15px;text-align:center;display:none}
+.mnav-badge.on{display:block}
+/* Décale le contenu pour le bottom-nav + la safe-area haute (encoche iOS) */
+html.m #nav{padding-top:var(--safe-t);height:calc(58px + var(--safe-t))}
+html.m #main{padding-top:calc(58px + var(--safe-t));padding-bottom:calc(64px + var(--safe-b))}
+html.m .btn-cart-nav{display:none}
+/* Modales → feuilles (sheets) qui montent du bas */
+html.m #prodModal,html.m #authModal,html.m #paymentModal{align-items:flex-end;padding:0}
+html.m .pm-card,html.m .auth-card,html.m .pay-card{width:100%;max-width:100%;max-height:90vh;overflow-y:auto;border-radius:18px 18px 0 0;border-bottom:none;padding-bottom:calc(1.5rem + var(--safe-b));animation:sheetUp .3s cubic-bezier(.32,.72,0,1)}
+html.m .auth-card,html.m .pay-card{padding-top:1.8rem}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+html.m .pm-card::before,html.m .auth-card::before,html.m .pay-card::before{content:'';position:absolute;top:7px;left:50%;transform:translateX(-50%);width:38px;height:4px;border-radius:2px;background:var(--fg2);opacity:.45;z-index:10}
+/* Toast au-dessus du bottom-nav, centré */
+html.m .toast{bottom:calc(70px + var(--safe-b));left:1rem;right:1rem;text-align:center}
+/* Zones tactiles plus généreuses + transition de page façon app */
+html.m .btn-solid,html.m .btn-outline,html.m .btn-outline-purple,html.m .btn-add,html.m .qty-btn,html.m .fchip{min-height:44px}
+html.m .page.active{animation:pageSlide .26s ease}
+@keyframes pageSlide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+/* ═══ Correctifs spécifiques appareil (exploitent .m / .is-ios / .is-touch) ═══ */
+/* iOS/Android : champ < 16px → zoom auto au focus. On force 16px en mode mobile (le navigateur ne zoome plus). */
+html.m input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=file]),
+html.m textarea, html.m select{font-size:16px}
+/* iOS : pas d'inflation du texte au changement d'orientation */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* Tactile : supprime le flash gris au tap + masque l'invite "Clique-moi" (sans souris) */
+html.is-touch *{-webkit-tap-highlight-color:transparent}
+html.is-touch .hc-hint{display:none}
+/* Confort tactile : cibles plus généreuses pour le pied de page et la FAQ */
+html.m .footer-nav a{display:inline-block;padding:7px 2px}
+html.m .faq-q{min-height:48px}
+/* Tablette tactile (mode mobile sur grand écran) : on borne la largeur de lecture pour rester aéré */
+html.m .prose,html.m .contact-wrap,html.m .faq-list{max-width:680px;margin-left:auto;margin-right:auto}
 </style>
 </head>
 <body>
@@ -921,6 +994,15 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 
 </div><!-- /main -->
 
+<!-- BOTTOM NAV (mobile · façon app) -->
+<nav id="mnav" aria-label="Navigation">
+  <a class="mnav-it" data-page="home" onclick="goto('home')"><span class="mnav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span><span class="mnav-lb">Accueil</span></a>
+  <a class="mnav-it" data-page="coques" onclick="goto('coques')"><span class="mnav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10 6h4"/></svg></span><span class="mnav-lb">Coques</span></a>
+  <a class="mnav-it" data-page="figurines" onclick="goto('figurines')"><span class="mnav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="3"/><path d="M7 21v-3a5 5 0 0 1 10 0v3"/></svg></span><span class="mnav-lb">Figurines</span></a>
+  <a class="mnav-it" data-page="cart" onclick="goto('cart')"><span class="mnav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="19" cy="20" r="1.4"/><path d="M2 3h3l2.4 12a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.3L21 7H6"/></svg></span><span class="mnav-lb">Panier</span><span class="mnav-badge" id="mnavCartN">0</span></a>
+  <a class="mnav-it" data-page="account" onclick="accountNavClick()"><span class="mnav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 21a7 7 0 0 1 14 0"/></svg></span><span class="mnav-lb">Compte</span></a>
+</nav>
+
 
 
 <div class="toast" id="toast"></div>
@@ -1229,6 +1311,7 @@ function goto(page){
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('#page-'+page+' .reveal').forEach(function(e){e.classList.add('in');});
   document.querySelectorAll('.nav-links a').forEach(a=>a.classList.toggle('active',a.dataset.page===page));
+  document.querySelectorAll('.mnav-it').forEach(a=>a.classList.toggle('active',a.dataset.page===page));
   window.scrollTo(0,0);
   if(page==='figurines'&&!v3dInited){setTimeout(initV3D,200);}
   if(page==='coques'){setTimeout(function(){coqueViewer.init();},200);}
@@ -1250,7 +1333,7 @@ function filterCoques(theme,el){
 function prodLookup(type,id){return (type==='coque'?COQUES:FIGS).find(p=>p.id===id);}
 function cartTotalQty(){return cart.reduce((s,it)=>s+it.qty,0);}
 function cartSubtotal(){return cart.reduce((s,it)=>{const p=prodLookup(it.type,it.id);return s+(p?parseFloat(p.price):0)*it.qty;},0);}
-function updateCartBadge(){const e=document.getElementById('cartN');if(e)e.textContent=cartTotalQty();}
+function updateCartBadge(){const n=cartTotalQty();const e=document.getElementById('cartN');if(e)e.textContent=n;const m=document.getElementById('mnavCartN');if(m){m.textContent=n;m.classList.toggle('on',n>0);}}
 
 // ── Code promo (validé côté Worker, appliqué au panier) ──
 let appliedPromo=null; // {code,type,value,min}
