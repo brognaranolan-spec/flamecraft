@@ -183,6 +183,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <button class="nav-it" data-sec="products"><span class="nav-ico">▤</span><span>Produits</span></button>
       <button class="nav-it" data-sec="studio"><span class="nav-ico">◉</span><span>Studio 3D</span></button>
       <button class="nav-it" data-sec="content"><span class="nav-ico">✎</span><span>Contenu</span></button>
+      <button class="nav-it" data-sec="disposition"><span class="nav-ico">▥</span><span>Disposition</span></button>
       <button class="nav-it" data-sec="orders"><span class="nav-ico">▦</span><span>Commandes</span></button>
       <button class="nav-it" data-sec="analytics"><span class="nav-ico">◔</span><span>Analytics</span></button>
       <button class="nav-it" data-sec="promos"><span class="nav-ico">%</span><span>Codes promo</span></button>
@@ -298,6 +299,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         </div>
       </section>
 
+      <!-- DISPOSITION -->
+      <section class="section" id="sec-disposition">
+        <div class="hint" style="margin-bottom:1.1rem">Personnalise l'agencement du site (appliqué à tous les visiteurs après « Publier »). « Auto » garde l'agencement intelligent qui s'adapte au nombre d'articles.</div>
+        <div id="layoutPanel"></div>
+      </section>
+
       <!-- ORDERS -->
       <section class="section" id="sec-orders">
         <div class="card">
@@ -383,10 +390,11 @@ const DEFAULT_CONTENT = {eyebrow:'Drop 003 — Été 2026',h1:'DARK',h2:'KAWAII'
   desc:"Coques et figurines imprimées à la main, pièce par pièce. Entre l'obscurité et le mignon. Entre le réel et le pixel.",
   btn1:'Voir les coques ↗',btn2:'Figurines',siteName:'FLAMECRAFT',siteSub:'Coques & Figurines 3D',instagram:'',etsy:''};
 const BADGES={'':'Aucun','new':'Nouveau','lim':'Limité','col':'Collab'};
+function layoutDefaults(){return {coquesCols:0,figsCols:0,cardSize:'M',homeCoquesN:3,homeFigsN:4,coqueFeat:false,coqueFeatId:null,figFeat:true,figFeatId:null};}
 
 // ═══════════ ÉTAT ═══════════
 let TOKEN = sessionStorage.getItem('fc_admin_tok') || '';
-let state = { coques:[], figs:[], content:{}, settings:{}, promos:[], dirty:false };
+let state = { coques:[], figs:[], content:{}, settings:{}, promos:[], layout:layoutDefaults(), dirty:false };
 let stats = null, orders = null;
 
 function key(type,id){return type+':'+id;}
@@ -444,6 +452,7 @@ function loadConfig(){
   state.figs=clone(DEFAULT_FIGS);
   state.content=clone(DEFAULT_CONTENT);
   state.promos=[];
+  state.layout=layoutDefaults();
   return fetch(API_BASE.replace(/\/$/,'')+'/config?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
     if(cfg&&cfg.products){
       Object.keys(cfg.products).forEach(function(k){
@@ -455,6 +464,7 @@ function loadConfig(){
     }
     if(cfg&&cfg.content)Object.assign(state.content,cfg.content);
     if(cfg&&cfg.settings)state.settings=cfg.settings;
+    state.layout=Object.assign(layoutDefaults(),(cfg&&cfg.settings&&cfg.settings.layout)||{});
   }).catch(function(){}).then(function(){
     return api('/admin/promos').then(function(d){state.promos=Array.isArray(d.promos)?d.promos:[];}).catch(function(){state.promos=[];});
   }).then(function(){
@@ -467,7 +477,7 @@ function buildConfig(){
   var products={};
   state.coques.forEach(function(p){products[key('coque',p.id)]=p;});
   state.figs.forEach(function(p){products[key('fig',p.id)]=p;});
-  return {products:products,content:state.content,settings:state.settings,promos:state.promos};
+  return {products:products,content:state.content,settings:Object.assign({},state.settings,{layout:state.layout}),promos:state.promos};
 }
 function publish(){
   api('/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildConfig())})
@@ -482,7 +492,7 @@ function resetConfig(){
     .catch(function(e){toast('Erreur : '+e.message,'bad');});
 }
 
-function refreshAll(){renderProducts();renderPromos();fillContent();fillStudioSelect();renderKpis();renderDiag();}
+function refreshAll(){renderProducts();renderPromos();renderLayout();fillContent();fillStudioSelect();renderKpis();renderDiag();}
 
 // ═══════════ NAV ═══════════
 document.getElementById('nav').addEventListener('click',function(e){
@@ -638,6 +648,38 @@ function drModelFile(input){var f=input.files[0];if(!f)return;var p=findP(drawer
   uploadAsset(p,drawerCtx.type,drawerCtx.id,f,'model').then(function(){drAssets();renderProducts();fillStudioSelect();toast('Modèle 3D importé — publie pour l\'appliquer','ok');}).catch(function(e){if(e)toast('Erreur : '+(e.message||e),'bad');});}
 function drClearImg(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p._img)return;var k=p._img.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});p._img='';markDirty();drAssets();renderProducts();toast('Image retirée');}
 function drClearModel(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p.model)return;var k=p.model.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});p.model='';markDirty();drAssets();renderProducts();fillStudioSelect();toast('Modèle retiré');}
+
+// ═══════════ DISPOSITION ═══════════
+function renderLayout(){
+  var wrap=document.getElementById('layoutPanel');if(!wrap)return;
+  var L=state.layout;
+  function colSel(field){var opts=[['0','Auto (intelligent)'],['2','2 colonnes'],['3','3 colonnes'],['4','4 colonnes'],['5','5 colonnes']];return '<select class="f-inp" onchange="layoutEdit(\''+field+'\',this.value)">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(L[field]||0)===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
+  function sizeSel(){return '<select class="f-inp" onchange="layoutEdit(\'cardSize\',this.value)">'+[['S','Petites'],['M','Moyennes (déf.)'],['L','Grandes']].map(function(o){return '<option value="'+o[0]+'"'+(L.cardSize===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
+  function prodSel(field,list){return '<select class="f-inp" onchange="layoutEdit(\''+field+'\',this.value)"><option value="">Auto (1er produit)</option>'+list.filter(function(p){return !p.archived;}).map(function(p){return '<option value="'+p.id+'"'+(String(L[field])===String(p.id)?' selected':'')+'>'+esc(p.name||('#'+p.id))+'</option>';}).join('')+'</select>';}
+  function num(field,def){return '<input class="f-inp" type="number" min="1" max="8" value="'+(L[field]||def)+'" onchange="layoutEdit(\''+field+'\',this.value)">';}
+  wrap.innerHTML=
+    '<div class="card" style="max-width:640px"><div class="card-h">Grilles produits</div>'+
+      '<div class="frow2"><div class="frow"><label class="f-lbl">Colonnes — Coques</label>'+colSel('coquesCols')+'</div>'+
+        '<div class="frow"><label class="f-lbl">Colonnes — Figurines</label>'+colSel('figsCols')+'</div></div>'+
+      '<div class="frow" style="margin-top:.8rem"><label class="f-lbl">Taille des cartes</label>'+sizeSel()+'</div>'+
+      '<div class="hint" style="margin-top:.7rem">« Auto » s\'adapte tout seul au nombre d\'articles (recommandé). Sinon, nombre de colonnes fixe quelle que soit la quantité.</div></div>'+
+    '<div class="card" style="max-width:640px"><div class="card-h">Article vedette (en grand, en haut de page)</div>'+
+      '<label class="chk"><input type="checkbox"'+(L.coqueFeat?' checked':'')+' onchange="layoutEdit(\'coqueFeat\',this.checked)"> Mettre une coque en vedette (page Coques)</label>'+
+      '<div class="frow" style="margin:.5rem 0 1rem"><label class="f-lbl">Quelle coque ?</label>'+prodSel('coqueFeatId',state.coques)+'</div>'+
+      '<label class="chk"><input type="checkbox"'+(L.figFeat?' checked':'')+' onchange="layoutEdit(\'figFeat\',this.checked)"> Mettre une figurine en vedette (page Figurines)</label>'+
+      '<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Quelle figurine ?</label>'+prodSel('figFeatId',state.figs)+'</div>'+
+      '<div class="hint" style="margin-top:.7rem">La vedette s\'affiche en grand en haut de page et n\'est pas répétée dans la grille.</div></div>'+
+    '<div class="card" style="max-width:640px"><div class="card-h">Page d\'accueil — produits mis en avant</div>'+
+      '<div class="frow2"><div class="frow"><label class="f-lbl">Nb de coques</label>'+num('homeCoquesN',3)+'</div>'+
+        '<div class="frow"><label class="f-lbl">Nb de figurines</label>'+num('homeFigsN',4)+'</div></div>'+
+      '<div class="hint" style="margin-top:.7rem">Les produits cochés « accueil » dans l\'onglet Produits passent en premier ; on complète jusqu\'à ce nombre.</div></div>';
+}
+function layoutEdit(field,val){
+  if(['coquesCols','figsCols'].indexOf(field)>=0)val=parseInt(val,10)||0;
+  else if(['homeCoquesN','homeFigsN'].indexOf(field)>=0)val=Math.max(1,Math.min(8,parseInt(val,10)||1));
+  else if(field==='coqueFeatId'||field==='figFeatId')val=(val===''||val==null)?null:parseInt(val,10);
+  state.layout[field]=val;markDirty();
+}
 
 // ═══════════ CODES PROMO ═══════════
 function renderPromos(){

@@ -783,6 +783,7 @@ html.m .section{padding-left:.9rem;padding-right:.9rem}
       <div class="filter-bar" id="coques-filters"></div>
     </div>
     <section class="section">
+      <div class="fig-feat" id="coque-feature" style="display:none"></div>
       <div class="g3" id="coques-grid"></div>
     </section>
 
@@ -1167,6 +1168,48 @@ const FIGS = [
 ];
 let ALL_PRODS = [...COQUES,...FIGS];
 let cart=[]; // [{type:'coque'|'fig', id, qty}]
+
+// ── DISPOSITION (réglable depuis le dashboard, appliquée en direct) ──
+var LAYOUT={coquesCols:0,figsCols:0,cardSize:'M',homeCoquesN:3,homeFigsN:4,coqueFeat:false,coqueFeatId:null,figFeat:true,figFeatId:null};
+function cardMinMax(){return {S:[188,224],M:[230,288],L:[280,344]}[LAYOUT.cardSize]||[230,288];}
+function applyGrid(el,type){
+  if(!el)return;
+  var cols=(type==='coque')?LAYOUT.coquesCols:LAYOUT.figsCols, mm=cardMinMax(), gap=24;
+  if(cols&&cols>=1){                                   // colonnes fixes choisies
+    el.style.gridTemplateColumns='repeat('+cols+',minmax('+mm[0]+'px,'+mm[1]+'px))';
+    el.style.maxWidth=(cols*mm[1]+(cols-1)*gap)+'px';
+    el.style.justifyContent='center';
+    el.removeAttribute('data-n');
+  } else if(LAYOUT.cardSize!=='M'){                    // auto-colonnes, taille perso
+    el.style.gridTemplateColumns='repeat(auto-fit,minmax('+mm[0]+'px,'+mm[1]+'px))';
+    el.style.justifyContent='center';el.style.maxWidth='';
+  } else {                                             // défaut : CSS auto (data-n)
+    el.style.gridTemplateColumns='';el.style.maxWidth='';el.style.justifyContent='';
+  }
+}
+function applyAllGrids(){applyGrid(document.getElementById('home-coques'),'coque');applyGrid(document.getElementById('home-figs'),'fig');applyGrid(document.getElementById('coques-grid'),'coque');applyGrid(document.getElementById('figs-grid'),'fig');}
+function liveList(type){return (type==='coque'?COQUES:FIGS).filter(function(d){return !d.archived;});}
+function pickFeatured(list,id){if(id!=null){var f=list.find(function(p){return p.id===id&&!p.archived;});if(f)return f;}return list.find(function(p){return !p.archived;})||list[0];}
+function featuredFor(type){if(!((type==='coque')?LAYOUT.coqueFeat:LAYOUT.figFeat))return null;return pickFeatured(liveList(type),(type==='coque')?LAYOUT.coqueFeatId:LAYOUT.figFeatId);}
+function gridList(type){var live=liveList(type),f=featuredFor(type);return (f&&live.length>1)?live.filter(function(p){return p!==f;}):live;}
+// Bloc « vedette » générique (gros article en haut), réutilisé coques + figurines
+function featuredHTML(type,p){
+  var art=p._img?('<img src="'+p._img+'" style="width:100%;height:100%;object-fit:cover">'):(type==='coque'?mkLighterSVG(p.pat,p.theme):mkFigSVG(p.id,p.theme));
+  var specs=(type==='coque')
+    ? '<div class="fspec"><span class="fl">Compatible</span><span class="fv">'+(p.compat||'—')+'</span></div><div class="fspec"><span class="fl">Matière</span><span class="fv">PLA+ / PETG</span></div>'
+    : '<div class="fspec"><span class="fl">Hauteur</span><span class="fv">'+(p.h||'—')+'</span></div><div class="fspec"><span class="fl">Matière</span><span class="fv">'+(p.mat||'—')+'</span></div>'+(typeof p.stock==='number'?'<div class="fspec"><span class="fl">Stock</span><span class="fv">'+p.stock+' pièces</span></div>':'');
+  return '<div class="fig-feat-art">'+art+'</div><div class="fig-feat-body">'+
+    '<div class="sec-tag '+(type==='coque'?'':'p')+'">'+(type==='coque'?'Coque vedette':'Figurine vedette')+'</div>'+
+    '<div class="fig-title">'+p.name+'</div><div class="fig-specs">'+specs+'</div>'+
+    '<p class="fig-desc">'+p.desc+'</p>'+
+    '<div class="fig-price-row"><div class="fig-price">€'+p.price+'</div>'+
+    '<button class="btn-solid" onclick="addToCart(\''+type+'\','+p.id+')">Ajouter au panier</button></div></div>';
+}
+function renderCoqueFeature(){
+  var el=document.getElementById('coque-feature');if(!el)return;
+  var f=featuredFor('coque');
+  if(f){el.innerHTML=featuredHTML('coque',f);el.style.display='';}else{el.style.display='none';el.innerHTML='';}
+}
 let autoRot=true, wireMode=false;
 let v3dScene,v3dCam,v3dRenderer,v3dMesh,v3dAnim,v3dMat,v3dLight1,v3dLight2,v3dInited=false;
 let isDrag=false,prevMX=0,prevMY=0;
@@ -1310,46 +1353,30 @@ function renderAll(){
   const items=['Impression FDM & résine UV','40+ coloris de filament','Fait main en Bretagne','Figurines édition limitée','Compatible Bic · Cricket · Clipper','Design sur-mesure','Livraison soignée'];
   const dup=[...items,...items];
   document.getElementById('mqTrack').innerHTML=dup.map(t=>`<span class="marquee-item"><span class="mdot"></span>${t}</span>`).join('');
-  // home grids
-  var liveCoques=COQUES.filter(function(d){return !d.archived;});
-  var liveFigs=FIGS.filter(function(d){return !d.archived;});
-  // Teaser accueil : produits « mis en avant » d'abord, complétés pour des rangées équilibrées (3 coques / 4 figurines)
-  function homePick(list,n){var f=list.filter(function(d){return d.home;});return f.concat(list.filter(function(d){return !d.home;})).slice(0,n);}
-  var homeCoques=homePick(liveCoques,3);
-  var homeFigs=homePick(liveFigs,4);
+  // home grids — teaser : produits « mis en avant » d'abord, complétés au nombre choisi (Disposition)
+  function homePick(list,n){var f=list.filter(function(d){return d.home;});return f.concat(list.filter(function(d){return !d.home;})).slice(0,Math.max(1,n||3));}
+  var homeCoques=homePick(liveList('coque'),LAYOUT.homeCoquesN);
+  var homeFigs=homePick(liveList('fig'),LAYOUT.homeFigsN);
   document.getElementById('home-coques').innerHTML=homeCoques.map(d=>renderCoque(d)).join('');document.getElementById('home-coques').dataset.n=homeCoques.length;
   document.getElementById('home-figs').innerHTML=homeFigs.map(renderFig).join('');document.getElementById('home-figs').dataset.n=homeFigs.length;
-  // coques page
-  document.getElementById('coques-grid').innerHTML=liveCoques.map(d=>renderCoque(d)).join('');document.getElementById('coques-grid').dataset.n=liveCoques.length;
+  // coques page (exclut la coque vedette si activée)
+  renderCoqueFeature();
+  var cg=gridList('coque');
+  document.getElementById('coques-grid').innerHTML=cg.map(d=>renderCoque(d)).join('');document.getElementById('coques-grid').dataset.n=cg.length;
   // filters
   const themes=['Tout','Dark kawaii','Tech','Dark fantasy','Cosmique','Synthwave','Alt'];
   document.getElementById('coques-filters').innerHTML=themes.map((t,i)=>`<button class="fchip ${i===0?'on':''}" onclick="filterCoques('${t}',this)">${t}</button>`).join('');
   // figurines page
   renderFigsPage();
+  applyAllGrids();
 }
 
 function renderFigsPage(){
-  const f=FIGS.find(function(d){return !d.archived;})||FIGS[0];
-  const featArt=f._img?`<img src="${f._img}" style="width:100%;height:100%;object-fit:cover">`:mkFigSVG(f.id,f.theme);
-  document.getElementById('fig-feature').innerHTML=`
-    <div class="fig-feat-art">${featArt}</div>
-    <div class="fig-feat-body">
-      <div class="sec-tag p">Figurine vedette</div>
-      <div class="fig-title">${f.name}</div>
-      <div class="fig-specs">
-        <div class="fspec"><span class="fl">Hauteur</span><span class="fv">${f.h}</span></div>
-        <div class="fspec"><span class="fl">Matière</span><span class="fv">${f.mat}</span></div>
-        <div class="fspec"><span class="fl">Stock restant</span><span class="fv">${f.stock} pièces</span></div>
-      </div>
-      <p class="fig-desc">${f.desc}</p>
-      <div class="fig-price-row">
-        <div class="fig-price">€${f.price}</div>
-        <button class="btn-solid" onclick="addToCart('fig',${f.id})">Ajouter au panier</button>
-      </div>
-    </div>`;
-  var _liveFigs=FIGS.filter(function(d){return !d.archived;});
-  var _gridFigs=_liveFigs.length>1?_liveFigs.filter(function(d){return d!==f;}):_liveFigs;
-  document.getElementById('figs-grid').innerHTML=_gridFigs.map(renderFig).join('');document.getElementById('figs-grid').dataset.n=_gridFigs.length;
+  var f=featuredFor('fig');
+  var fe=document.getElementById('fig-feature');
+  if(fe){ if(f){fe.style.display='';fe.innerHTML=featuredHTML('fig',f);}else{fe.style.display='none';fe.innerHTML='';} }
+  var gf=gridList('fig');
+  var g=document.getElementById('figs-grid');g.innerHTML=gf.map(renderFig).join('');g.dataset.n=gf.length;applyGrid(g,'fig');
 }
 
 // ═══ NAVIGATION ═══
@@ -1374,10 +1401,10 @@ function goto(page){
 function filterCoques(theme,el){
   document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-  var base=COQUES.filter(function(d){return !d.archived;});
+  var base=gridList('coque');
   var show=theme==='Tout'?base:base.filter(function(d){return d.cat.includes(theme)||d.cat===theme;});
   var _shown=(theme==='Tout'?base:(show.length?show:base));
-  document.getElementById('coques-grid').innerHTML=_shown.map(d=>renderCoque(d)).join('');document.getElementById('coques-grid').dataset.n=_shown.length;
+  var g=document.getElementById('coques-grid');g.innerHTML=_shown.map(d=>renderCoque(d)).join('');g.dataset.n=_shown.length;applyGrid(g,'coque');
 }
 
 // ═══ CART ═══
@@ -2440,6 +2467,8 @@ function fcApplyConfig(cfg){
     });
     ALL_PRODS=[].concat(COQUES,FIGS);
   }
+  // Disposition (réglée dans le dashboard → settings.layout)
+  if(cfg.settings&&cfg.settings.layout&&typeof cfg.settings.layout==='object'){Object.assign(LAYOUT,cfg.settings.layout);}
   var c=cfg.content||{};
   fcSetTxt('h-eye',c.eyebrow);fcSetTxt('h-l1',c.h1);fcSetTxt('h-l2',c.h2);fcSetTxt('h-l3',c.h3);
   fcSetTxt('h-desc',c.desc);fcSetTxt('h-b1',c.btn1);fcSetTxt('h-b2',c.btn2);
