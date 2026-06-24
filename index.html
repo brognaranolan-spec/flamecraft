@@ -2539,8 +2539,23 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'&&document.getElementById('paymentModal').classList.contains('open'))PAY.close();
 });
 updateCartBadge();
-fcTrack('view');
-fcLoadConfig();
+
+// Mode APERÇU (iframe du dashboard, ancre #fcpreview) : pas de tracking ni de
+// config publiée — la config (produits/contenu/disposition) arrive en direct
+// par postMessage depuis le dashboard, pour prévisualiser avant de publier.
+var FC_PREVIEW = location.hash.indexOf('fcpreview') >= 0;
+if(FC_PREVIEW){
+  document.documentElement.classList.add('fc-preview');
+  window.addEventListener('message',function(e){
+    var d=e.data||{};
+    if(d.type==='fc-preview'&&d.cfg){try{fcApplyConfig(d.cfg);}catch(_){}}
+    else if(d.type==='fc-goto'&&d.page){try{goto(d.page);}catch(_){}}
+  });
+  try{parent.postMessage({type:'fc-ready'},'*');}catch(_){}
+}else{
+  fcTrack('view');
+  fcLoadConfig();
+}
 
 // ── Adaptateur SUPABASE (activé automatiquement si les 2 constantes sont remplies) ──
 function fcBootstrap(){
