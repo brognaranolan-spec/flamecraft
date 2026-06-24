@@ -171,6 +171,7 @@ input,textarea,select{font-family:inherit}
   .g3[data-n="2"],.g4[data-n="2"]{grid-template-columns:repeat(2,minmax(280px,340px));max-width:716px}
   .g3[data-n="3"]{grid-template-columns:repeat(3,minmax(250px,300px));max-width:948px}
   .g3[data-n="4"]{grid-template-columns:repeat(2,minmax(260px,320px));max-width:664px}        /* 2×2 équilibré, pas de 3+1 */
+  .g4[data-n="4"]{grid-template-columns:repeat(4,minmax(210px,275px));max-width:1172px}        /* 4 en ligne */
   .g4[data-n="3"],.g4[data-n="5"],.g4[data-n="6"]{grid-template-columns:repeat(3,minmax(240px,300px));max-width:912px}  /* 3 / 3+2 / 3+3 */
 }
 
@@ -1312,8 +1313,10 @@ function renderAll(){
   // home grids
   var liveCoques=COQUES.filter(function(d){return !d.archived;});
   var liveFigs=FIGS.filter(function(d){return !d.archived;});
-  var homeCoques=liveCoques.filter(function(d){return d.home;});if(!homeCoques.length)homeCoques=liveCoques.slice(0,3);
-  var homeFigs=liveFigs.filter(function(d){return d.home;});if(!homeFigs.length)homeFigs=liveFigs;
+  // Teaser accueil : produits « mis en avant » d'abord, complétés pour des rangées équilibrées (3 coques / 4 figurines)
+  function homePick(list,n){var f=list.filter(function(d){return d.home;});return f.concat(list.filter(function(d){return !d.home;})).slice(0,n);}
+  var homeCoques=homePick(liveCoques,3);
+  var homeFigs=homePick(liveFigs,4);
   document.getElementById('home-coques').innerHTML=homeCoques.map(d=>renderCoque(d)).join('');document.getElementById('home-coques').dataset.n=homeCoques.length;
   document.getElementById('home-figs').innerHTML=homeFigs.map(renderFig).join('');document.getElementById('home-figs').dataset.n=homeFigs.length;
   // coques page
@@ -1345,7 +1348,8 @@ function renderFigsPage(){
       </div>
     </div>`;
   var _liveFigs=FIGS.filter(function(d){return !d.archived;});
-  document.getElementById('figs-grid').innerHTML=_liveFigs.map(renderFig).join('');document.getElementById('figs-grid').dataset.n=_liveFigs.length;
+  var _gridFigs=_liveFigs.length>1?_liveFigs.filter(function(d){return d!==f;}):_liveFigs;
+  document.getElementById('figs-grid').innerHTML=_gridFigs.map(renderFig).join('');document.getElementById('figs-grid').dataset.n=_gridFigs.length;
 }
 
 // ═══ NAVIGATION ═══
