@@ -155,6 +155,15 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .lp-layout{display:grid;grid-template-columns:1fr;gap:1.2rem;align-items:start}
 .lp-tab.on{color:var(--fg);border-color:var(--cyan)}
 @media(min-width:1140px){.lp-layout{grid-template-columns:minmax(330px,390px) 1fr}.lp-preview{position:sticky;top:76px}}
+.lp-models{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.lp-model{text-align:left;background:var(--bg4);border:1px solid var(--b2);border-radius:8px;padding:9px 11px;color:var(--fg2);display:flex;flex-direction:column;gap:3px;transition:all .15s}
+.lp-model:hover{border-color:var(--purple2)}
+.lp-model.on{border-color:var(--cyan);background:var(--cyanA);color:var(--fg)}
+.lp-model b{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:.03em}
+.lp-model span{font-size:.62rem;line-height:1.3;color:var(--fg3)}
+.lp-seg{display:inline-flex;border:1px solid var(--b1);border-radius:6px;overflow:hidden}
+.lp-dev{background:transparent;color:var(--fg3);border:none;padding:6px 11px;font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.06em;cursor:pointer}
+.lp-dev.on{background:var(--pink);color:#fff}
 </style>
 </head>
 <body>
@@ -394,7 +403,14 @@ const DEFAULT_CONTENT = {eyebrow:'Drop 003 — Été 2026',h1:'DARK',h2:'KAWAII'
   desc:"Coques et figurines imprimées à la main, pièce par pièce. Entre l'obscurité et le mignon. Entre le réel et le pixel.",
   btn1:'Voir les coques ↗',btn2:'Figurines',siteName:'FLAMECRAFT',siteSub:'Coques & Figurines 3D',instagram:'',etsy:''};
 const BADGES={'':'Aucun','new':'Nouveau','lim':'Limité','col':'Collab'};
-function layoutDefaults(){return {coquesCols:0,figsCols:0,cardSize:'M',homeCoquesN:3,homeFigsN:4,coqueFeat:false,coqueFeatId:null,figFeat:true,figFeatId:null};}
+function layoutDefaults(){return {coquesCols:0,figsCols:0,cardSize:'M',cardStyle:'standard',model:'standard',homeCoquesN:3,homeFigsN:4,coqueFeat:false,coqueFeatId:null,figFeat:true,figFeatId:null};}
+// Modèles de disposition prêts à l'emploi (bundles de réglages, ajustables ensuite)
+var MODELS={
+  standard:{label:'Standard',desc:'Équilibré · grille qui s\'adapte au nombre d\'articles',set:{coquesCols:0,figsCols:0,cardSize:'M',cardStyle:'standard',coqueFeat:false,figFeat:true,homeCoquesN:3,homeFigsN:4}},
+  vitrine:{label:'Vitrine',desc:'Premium · grandes cartes 3 col. + coque & figurine vedettes',set:{coquesCols:3,figsCols:3,cardSize:'L',cardStyle:'standard',coqueFeat:true,figFeat:true,homeCoquesN:3,homeFigsN:3}},
+  catalogue:{label:'Catalogue',desc:'Dense · petites cartes, beaucoup par rangée, sans vedette',set:{coquesCols:4,figsCols:4,cardSize:'S',cardStyle:'compact',coqueFeat:false,figFeat:false,homeCoquesN:4,homeFigsN:4}},
+  liste:{label:'Liste',desc:'Lignes horizontales · photo + infos côte à côte',set:{coquesCols:2,figsCols:2,cardSize:'M',cardStyle:'list',coqueFeat:false,figFeat:false,homeCoquesN:3,homeFigsN:4}}
+};
 
 // ═══════════ ÉTAT ═══════════
 let TOKEN = sessionStorage.getItem('fc_admin_tok') || '';
@@ -655,50 +671,77 @@ function drClearImg(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p._img)return
 function drClearModel(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p.model)return;var k=p.model.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});p.model='';markDirty();drAssets();renderProducts();fillStudioSelect();toast('Modèle retiré');}
 
 // ═══════════ DISPOSITION ═══════════
+var lpDev='desktop';
 function renderLayout(){
   var wrap=document.getElementById('layoutPanel');if(!wrap)return;
-  var L=state.layout;
-  function colSel(field){var opts=[['0','Auto (intelligent)'],['2','2 colonnes'],['3','3 colonnes'],['4','4 colonnes'],['5','5 colonnes']];return '<select class="f-inp" onchange="layoutEdit(\''+field+'\',this.value)">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(L[field]||0)===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
-  function sizeSel(){return '<select class="f-inp" onchange="layoutEdit(\'cardSize\',this.value)">'+[['S','Petites'],['M','Moyennes (déf.)'],['L','Grandes']].map(function(o){return '<option value="'+o[0]+'"'+(L.cardSize===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
-  function prodSel(field,list){return '<select class="f-inp" onchange="layoutEdit(\''+field+'\',this.value)"><option value="">Auto (1er produit)</option>'+list.filter(function(p){return !p.archived;}).map(function(p){return '<option value="'+p.id+'"'+(String(L[field])===String(p.id)?' selected':'')+'>'+esc(p.name||('#'+p.id))+'</option>';}).join('')+'</select>';}
-  function num(field,def){return '<input class="f-inp" type="number" min="1" max="8" value="'+(L[field]||def)+'" onchange="layoutEdit(\''+field+'\',this.value)">';}
   wrap.innerHTML=
-    '<div class="lp-layout"><div class="lp-controls">'+
-      '<div class="card"><div class="card-h">Grilles produits</div>'+
-        '<div class="frow2"><div class="frow"><label class="f-lbl">Colonnes — Coques</label>'+colSel('coquesCols')+'</div>'+
-          '<div class="frow"><label class="f-lbl">Colonnes — Figurines</label>'+colSel('figsCols')+'</div></div>'+
-        '<div class="frow" style="margin-top:.8rem"><label class="f-lbl">Taille des cartes</label>'+sizeSel()+'</div>'+
-        '<div class="hint" style="margin-top:.7rem">« Auto » s\'adapte tout seul au nombre d\'articles (recommandé). Sinon, nombre de colonnes fixe.</div></div>'+
-      '<div class="card"><div class="card-h">Article vedette (en grand, en haut de page)</div>'+
-        '<label class="chk"><input type="checkbox"'+(L.coqueFeat?' checked':'')+' onchange="layoutEdit(\'coqueFeat\',this.checked)"> Mettre une coque en vedette (page Coques)</label>'+
-        '<div class="frow" style="margin:.5rem 0 1rem"><label class="f-lbl">Quelle coque ?</label>'+prodSel('coqueFeatId',state.coques)+'</div>'+
-        '<label class="chk"><input type="checkbox"'+(L.figFeat?' checked':'')+' onchange="layoutEdit(\'figFeat\',this.checked)"> Mettre une figurine en vedette (page Figurines)</label>'+
-        '<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Quelle figurine ?</label>'+prodSel('figFeatId',state.figs)+'</div>'+
-        '<div class="hint" style="margin-top:.7rem">La vedette s\'affiche en grand en haut de page et n\'est pas répétée dans la grille.</div></div>'+
-      '<div class="card"><div class="card-h">Page d\'accueil — produits mis en avant</div>'+
-        '<div class="frow2"><div class="frow"><label class="f-lbl">Nb de coques</label>'+num('homeCoquesN',3)+'</div>'+
-          '<div class="frow"><label class="f-lbl">Nb de figurines</label>'+num('homeFigsN',4)+'</div></div>'+
-        '<div class="hint" style="margin-top:.7rem">Les produits cochés « accueil » passent en premier ; on complète jusqu\'à ce nombre.</div></div>'+
-    '</div>'+
-    '<div class="lp-preview"><div class="card" style="margin:0">'+
-      '<div class="card-h" style="margin-bottom:.7rem">Aperçu en direct'+
-        '<div style="display:flex;gap:6px">'+
-          '<button class="btn btn-ghost btn-sm lp-tab on" onclick="lpGoto(\'coques\',this)">Coques</button>'+
-          '<button class="btn btn-ghost btn-sm lp-tab" onclick="lpGoto(\'figurines\',this)">Figurines</button>'+
-          '<button class="btn btn-ghost btn-sm lp-tab" onclick="lpGoto(\'home\',this)">Accueil</button>'+
-        '</div></div>'+
-      '<div id="lp-wrap" style="position:relative;width:100%;overflow:hidden;border:1px solid var(--b2);border-radius:8px;background:var(--bg)">'+
-        '<iframe id="lp-frame" src="index.html#fcpreview" onload="lpReady()" style="width:1280px;height:900px;border:0;display:block;transform-origin:top left"></iframe>'+
-      '</div>'+
-      '<div class="muted mono" style="font-size:.56rem;margin-top:6px">Aperçu non publié · « Publier » applique aux visiteurs.</div>'+
-    '</div></div></div>';
+    '<div class="lp-layout">'+
+      '<div class="lp-controls" id="lpControls"></div>'+
+      '<div class="lp-preview"><div class="card" style="margin:0">'+
+        '<div class="card-h" style="margin-bottom:.7rem;flex-wrap:wrap;gap:8px">Aperçu en direct'+
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+            '<div class="lp-seg"><button class="lp-dev on" onclick="lpSetDevice(\'desktop\',this)">Ordinateur</button><button class="lp-dev" onclick="lpSetDevice(\'phone\',this)">Téléphone</button></div>'+
+            '<span style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm lp-tab on" onclick="lpGoto(\'coques\',this)">Coques</button>'+
+            '<button class="btn btn-ghost btn-sm lp-tab" onclick="lpGoto(\'figurines\',this)">Figurines</button>'+
+            '<button class="btn btn-ghost btn-sm lp-tab" onclick="lpGoto(\'home\',this)">Accueil</button></span>'+
+          '</div></div>'+
+        '<div id="lp-wrap" style="position:relative;width:100%;overflow:hidden;border:1px solid var(--b2);border-radius:8px;background:var(--bg)">'+
+          '<iframe id="lp-frame" src="index.html#fcpreview" onload="lpReady()" style="width:1280px;height:900px;border:0;display:block;transform-origin:top left"></iframe>'+
+        '</div>'+
+        '<div class="muted mono" style="font-size:.56rem;margin-top:6px">Aperçu non publié · « Publier » applique aux visiteurs. Les modèles personnalisent l\'ordinateur ; le téléphone garde son agencement « app ».</div>'+
+      '</div></div>'+
+    '</div>';
+  renderControls();
   setTimeout(lpScale,60);
 }
+function renderControls(){
+  var box=document.getElementById('lpControls');if(!box)return;
+  var L=state.layout;
+  function colSel(field){var opts=[['0','Auto (intelligent)'],['2','2 colonnes'],['3','3 colonnes'],['4','4 colonnes'],['5','5 colonnes']];return '<select class="f-inp" onchange="layoutEdit(\''+field+'\',this.value)">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(L[field]||0)===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
+  function sizeSel(){return '<select class="f-inp" onchange="layoutEdit(\'cardSize\',this.value)">'+[['S','Petites'],['M','Moyennes'],['L','Grandes']].map(function(o){return '<option value="'+o[0]+'"'+(L.cardSize===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
+  function styleSel(){return '<select class="f-inp" onchange="layoutEdit(\'cardStyle\',this.value)">'+[['standard','Cartes'],['compact','Compact'],['list','Liste (lignes)']].map(function(o){return '<option value="'+o[0]+'"'+(L.cardStyle===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
+  function prodSel(field,list){return '<select class="f-inp" onchange="layoutEdit(\''+field+'\',this.value)"><option value="">Auto (1er produit)</option>'+list.filter(function(p){return !p.archived;}).map(function(p){return '<option value="'+p.id+'"'+(String(L[field])===String(p.id)?' selected':'')+'>'+esc(p.name||('#'+p.id))+'</option>';}).join('')+'</select>';}
+  function num(field,def){return '<input class="f-inp" type="number" min="1" max="8" value="'+(L[field]||def)+'" onchange="layoutEdit(\''+field+'\',this.value)">';}
+  var models=Object.keys(MODELS).map(function(k){var m=MODELS[k];return '<button class="lp-model'+(L.model===k?' on':'')+'" onclick="applyModel(\''+k+'\')"><b>'+m.label+'</b><span>'+m.desc+'</span></button>';}).join('');
+  box.innerHTML=
+    '<div class="card"><div class="card-h">Modèle '+(L.model?'':'<span class="pill warn">personnalisé</span>')+'</div>'+
+      '<div class="lp-models">'+models+'</div>'+
+      '<div class="hint" style="margin-top:.7rem">Choisis un modèle, puis affine les réglages ci-dessous. Toute modif manuelle passe en « personnalisé ».</div></div>'+
+    '<div class="card"><div class="card-h">Grilles produits</div>'+
+      '<div class="frow2"><div class="frow"><label class="f-lbl">Colonnes — Coques</label>'+colSel('coquesCols')+'</div>'+
+        '<div class="frow"><label class="f-lbl">Colonnes — Figurines</label>'+colSel('figsCols')+'</div></div>'+
+      '<div class="frow2" style="margin-top:.8rem"><div class="frow"><label class="f-lbl">Taille des cartes</label>'+sizeSel()+'</div>'+
+        '<div class="frow"><label class="f-lbl">Style des cartes</label>'+styleSel()+'</div></div></div>'+
+    '<div class="card"><div class="card-h">Article vedette (en grand, en haut de page)</div>'+
+      '<label class="chk"><input type="checkbox"'+(L.coqueFeat?' checked':'')+' onchange="layoutEdit(\'coqueFeat\',this.checked)"> Mettre une coque en vedette (page Coques)</label>'+
+      '<div class="frow" style="margin:.5rem 0 1rem"><label class="f-lbl">Quelle coque ?</label>'+prodSel('coqueFeatId',state.coques)+'</div>'+
+      '<label class="chk"><input type="checkbox"'+(L.figFeat?' checked':'')+' onchange="layoutEdit(\'figFeat\',this.checked)"> Mettre une figurine en vedette (page Figurines)</label>'+
+      '<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Quelle figurine ?</label>'+prodSel('figFeatId',state.figs)+'</div></div>'+
+    '<div class="card"><div class="card-h">Page d\'accueil — produits mis en avant</div>'+
+      '<div class="frow2"><div class="frow"><label class="f-lbl">Nb de coques</label>'+num('homeCoquesN',3)+'</div>'+
+        '<div class="frow"><label class="f-lbl">Nb de figurines</label>'+num('homeFigsN',4)+'</div></div></div>';
+}
+function applyModel(key){var m=MODELS[key];if(!m)return;Object.assign(state.layout,m.set,{model:key});markDirty();renderControls();lpPostCfg();toast('Modèle « '+m.label+' » appliqué');}
 // ── Aperçu live : iframe du site (#fcpreview) piloté par postMessage ──
 function lpFrame(){return document.getElementById('lp-frame');}
 function lpPostCfg(){var f=lpFrame();if(f&&f.contentWindow){try{f.contentWindow.postMessage({type:'fc-preview',cfg:buildConfig()},'*');}catch(_){}}}
 function lpGoto(page,btn){var f=lpFrame();if(f&&f.contentWindow){try{f.contentWindow.postMessage({type:'fc-goto',page:page},'*');}catch(_){}}document.querySelectorAll('.lp-tab').forEach(function(t){t.classList.toggle('on',t===btn);});}
-function lpScale(){var w=document.getElementById('lp-wrap'),f=lpFrame();if(!w||!f||!w.clientWidth)return;var s=Math.min(1,w.clientWidth/1280);f.style.transform='scale('+s+')';w.style.height=Math.round(900*s)+'px';}
+function lpSetDevice(dev,btn){lpDev=dev;document.querySelectorAll('.lp-dev').forEach(function(b){b.classList.toggle('on',b===btn);});lpScale();}
+function lpScale(){
+  var w=document.getElementById('lp-wrap'),f=lpFrame();if(!w||!f||!w.clientWidth)return;
+  if(lpDev==='phone'){
+    var fw=390,fh=820; f.style.width=fw+'px';f.style.height=fh+'px';
+    var s=Math.min(1, w.clientWidth/fw, 640/fh);
+    f.style.transform='scale('+s+')';
+    f.style.marginLeft=Math.max(0,(w.clientWidth-fw*s)/2)+'px';
+    w.style.height=Math.round(fh*s)+'px';
+  }else{
+    f.style.width='1280px';f.style.height='900px';f.style.marginLeft='0';
+    var sd=Math.min(1,w.clientWidth/1280);
+    f.style.transform='scale('+sd+')';
+    w.style.height=Math.round(900*sd)+'px';
+  }
+}
 function lpReady(){lpScale();lpPostCfg();lpGoto('coques',document.querySelector('.lp-tab'));}
 window.addEventListener('message',function(e){if(e.data&&e.data.type==='fc-ready')lpPostCfg();});
 window.addEventListener('resize',lpScale);
@@ -706,7 +749,7 @@ function layoutEdit(field,val){
   if(['coquesCols','figsCols'].indexOf(field)>=0)val=parseInt(val,10)||0;
   else if(['homeCoquesN','homeFigsN'].indexOf(field)>=0)val=Math.max(1,Math.min(8,parseInt(val,10)||1));
   else if(field==='coqueFeatId'||field==='figFeatId')val=(val===''||val==null)?null:parseInt(val,10);
-  state.layout[field]=val;markDirty();lpPostCfg();
+  state.layout[field]=val;state.layout.model='';markDirty();renderControls();lpPostCfg();
 }
 
 // ═══════════ CODES PROMO ═══════════

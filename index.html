@@ -197,6 +197,16 @@ input,textarea,select{font-family:inherit}
 .cname{font-size:1rem;font-weight:600;color:var(--fg);margin-bottom:5px;line-height:1.25}
 .cdesc{font-size:.79rem;color:var(--fg2);line-height:1.55;margin-bottom:.95rem;font-weight:300}
 .cfoot{display:flex;align-items:center;justify-content:space-between}
+/* ── Styles de carte (modèles de disposition, desktop) ── */
+[data-cs="compact"] .cdesc{display:none}
+[data-cs="compact"] .card-body{padding:.6rem .8rem .8rem}
+[data-cs="compact"] .card-art{aspect-ratio:1.25}
+[data-cs="compact"] .card-art-fig{aspect-ratio:1}
+[data-cs="compact"] .cname{font-size:.9rem}
+[data-cs="list"] .card{display:grid;grid-template-columns:120px 1fr;align-items:stretch}
+[data-cs="list"] .card-art,[data-cs="list"] .card-art-fig{aspect-ratio:auto;height:100%;min-height:150px}
+[data-cs="list"] .card-body{padding:.9rem 1.1rem;display:flex;flex-direction:column;justify-content:center}
+[data-cs="list"] .cdesc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:.7rem}
 .cprice{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--fg);letter-spacing:.03em}
 .cprice .curr{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--fg3);font-weight:300}
 .cprice.c{color:var(--cyan)}.cprice.p{color:var(--purple2)}
@@ -1170,17 +1180,27 @@ let ALL_PRODS = [...COQUES,...FIGS];
 let cart=[]; // [{type:'coque'|'fig', id, qty}]
 
 // ── DISPOSITION (réglable depuis le dashboard, appliquée en direct) ──
-var LAYOUT={coquesCols:0,figsCols:0,cardSize:'M',homeCoquesN:3,homeFigsN:4,coqueFeat:false,coqueFeatId:null,figFeat:true,figFeatId:null};
-function cardMinMax(){return {S:[188,224],M:[230,288],L:[280,344]}[LAYOUT.cardSize]||[230,288];}
+var LAYOUT={coquesCols:0,figsCols:0,cardSize:'M',cardStyle:'standard',model:'standard',homeCoquesN:3,homeFigsN:4,coqueFeat:false,coqueFeatId:null,figFeat:true,figFeatId:null};
+function cardMinMax(){
+  if(LAYOUT.cardStyle==='list')return [300,560];
+  return {S:[188,224],M:[230,288],L:[280,344]}[LAYOUT.cardSize]||[230,288];
+}
 function applyGrid(el,type){
   if(!el)return;
+  // Mobile : on garde l'agencement « app » optimisé (les modèles ne s'appliquent qu'au desktop)
+  if(document.documentElement.classList.contains('m')){
+    el.style.gridTemplateColumns='';el.style.maxWidth='';el.style.justifyContent='';
+    el.setAttribute('data-cs','standard');return;
+  }
+  el.setAttribute('data-cs',LAYOUT.cardStyle||'standard');
   var cols=(type==='coque')?LAYOUT.coquesCols:LAYOUT.figsCols, mm=cardMinMax(), gap=24;
+  var custom=(LAYOUT.cardStyle!=='standard'||LAYOUT.cardSize!=='M');
   if(cols&&cols>=1){                                   // colonnes fixes choisies
     el.style.gridTemplateColumns='repeat('+cols+',minmax('+mm[0]+'px,'+mm[1]+'px))';
     el.style.maxWidth=(cols*mm[1]+(cols-1)*gap)+'px';
     el.style.justifyContent='center';
     el.removeAttribute('data-n');
-  } else if(LAYOUT.cardSize!=='M'){                    // auto-colonnes, taille perso
+  } else if(custom){                                   // auto-colonnes, taille/style perso
     el.style.gridTemplateColumns='repeat(auto-fit,minmax('+mm[0]+'px,'+mm[1]+'px))';
     el.style.justifyContent='center';el.style.maxWidth='';
   } else {                                             // défaut : CSS auto (data-n)
@@ -1188,6 +1208,7 @@ function applyGrid(el,type){
   }
 }
 function applyAllGrids(){applyGrid(document.getElementById('home-coques'),'coque');applyGrid(document.getElementById('home-figs'),'fig');applyGrid(document.getElementById('coques-grid'),'coque');applyGrid(document.getElementById('figs-grid'),'fig');}
+window.addEventListener('resize',function(){applyAllGrids();});
 function liveList(type){return (type==='coque'?COQUES:FIGS).filter(function(d){return !d.archived;});}
 function pickFeatured(list,id){if(id!=null){var f=list.find(function(p){return p.id===id&&!p.archived;});if(f)return f;}return list.find(function(p){return !p.archived;})||list[0];}
 function featuredFor(type){if(!((type==='coque')?LAYOUT.coqueFeat:LAYOUT.figFeat))return null;return pickFeatured(liveList(type),(type==='coque')?LAYOUT.coqueFeatId:LAYOUT.figFeatId);}
