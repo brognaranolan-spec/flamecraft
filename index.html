@@ -602,6 +602,13 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
   .hero-h1{font-size:3.3rem}
   .sec-h2{font-size:2rem}
 }
+/* Mascotte sur l'accueil MOBILE (réaffichée — PC inchangé ; les yeux suivent le scroll via JS) */
+html.m .hero{min-height:auto}
+html.m .hero-visual{display:flex;min-height:0;padding:.3rem 1.1rem 1.5rem}
+html.m .hero-char-svg{width:180px}
+html.m .char-ring.cr1{width:220px;height:220px}
+html.m .char-ring.cr2{width:176px;height:176px}
+html.m .char-ring.cr3{width:130px;height:130px}
 
 /* ═══════════ MODE MOBILE — refonte façon app (html.m) ═══════════ */
 :root{--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px)}
@@ -2698,6 +2705,24 @@ fcBootstrap();
       },{passive:true});
     }
   }
+  // Mascotte (MOBILE) : les yeux baissent/lèvent selon le SENS du scroll (pas de souris au tactile)
+  (function(){
+    var lastY=window.scrollY||window.pageYOffset||0, vel=0, cur=0, running=false;
+    function mob(){return document.documentElement.classList.contains('m');}
+    function loop(){
+      cur+=(vel-cur)*0.18; vel*=0.85;
+      var eyes=document.getElementById('hc-eyes');
+      if(eyes)eyes.setAttribute('transform','translate(0 '+(cur*6).toFixed(1)+')');
+      if(Math.abs(cur)>0.02||Math.abs(vel)>0.02){requestAnimationFrame(loop);}
+      else{if(eyes)eyes.setAttribute('transform','translate(0 0)');running=false;}
+    }
+    window.addEventListener('scroll',function(){
+      var y=window.scrollY||window.pageYOffset||0, d=y-lastY; lastY=y;
+      if(!mob())return;                                   // PC : on ne touche pas aux yeux (souris uniquement)
+      vel=Math.max(-1,Math.min(1,d/26));                  // scroll bas = yeux bas (+), scroll haut = yeux haut (−)
+      if(!running){running=true;requestAnimationFrame(loop);}
+    },{passive:true});
+  })();
   // mascotte : animation CONTINUE basée sur le temps (anneaux + aura + flottement)
   // -> valeurs fonction du temps : aucun reset / téléportation au changement de page
   (function(){
