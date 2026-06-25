@@ -403,13 +403,38 @@ const DEFAULT_CONTENT = {eyebrow:'Drop 003 — Été 2026',h1:'DARK',h2:'KAWAII'
   desc:"Coques et figurines imprimées à la main, pièce par pièce. Entre l'obscurité et le mignon. Entre le réel et le pixel.",
   btn1:'Voir les coques ↗',btn2:'Figurines',siteName:'FLAMECRAFT',siteSub:'Coques & Figurines 3D',instagram:'',etsy:''};
 const BADGES={'':'Aucun','new':'Nouveau','lim':'Limité','col':'Collab'};
-function layoutDefaults(){return {coquesCols:0,figsCols:0,cardSize:'M',cardStyle:'standard',model:'standard',homeCoquesN:3,homeFigsN:4,coqueFeat:false,coqueFeatId:null,figFeat:true,figFeatId:null};}
-// Modèles de disposition prêts à l'emploi (bundles de réglages, ajustables ensuite)
+// Disposition : réglages INDÉPENDANTS par appareil (desktop/phone) × type (coque/fig) + accueil par appareil
+function typeDefs(isFig){return {cols:0,cardSize:'M',cardStyle:'standard',feat:!!isFig,featId:null};}
+function homeDefs(){return {model:'classique',coquesN:3,figsN:4,cardStyle:'standard',order:'coques',showStats:true,showMarquee:true,showCta:true};}
+function devDefs(isPhone){var d={model:'standard',coque:typeDefs(false),fig:typeDefs(true),home:homeDefs()};if(isPhone){d.coque.cols=2;d.fig.cols=2;d.fig.feat=false;d.home.coquesN=2;d.home.figsN=2;}return d;}
+function layoutDefaults(){return {desktop:devDefs(false),phone:devDefs(true)};}
+function migrateLayout(raw){
+  var L=layoutDefaults();
+  if(!raw||typeof raw!=='object')return L;
+  if(raw.desktop||raw.phone){
+    ['desktop','phone'].forEach(function(dv){var r=raw[dv];if(!r)return;if(r.model!=null)L[dv].model=r.model;['coque','fig'].forEach(function(t){if(r[t])Object.assign(L[dv][t],r[t]);});if(r.home)Object.assign(L[dv].home,r.home);});
+    return L;
+  }
+  var d=L.desktop;d.model=raw.model||'';
+  d.coque={cols:raw.coquesCols||0,cardSize:raw.cardSize||'M',cardStyle:raw.cardStyle||'standard',feat:!!raw.coqueFeat,featId:(raw.coqueFeatId==null?null:raw.coqueFeatId)};
+  d.fig={cols:raw.figsCols||0,cardSize:raw.cardSize||'M',cardStyle:raw.cardStyle||'standard',feat:(raw.figFeat!==false),featId:(raw.figFeatId==null?null:raw.figFeatId)};
+  if(raw.homeCoquesN!=null)d.home.coquesN=raw.homeCoquesN;
+  if(raw.homeFigsN!=null)d.home.figsN=raw.homeFigsN;
+  return L;
+}
+// Modèles produits (appliqués à l'appareil courant — coques + figurines)
 var MODELS={
-  standard:{label:'Standard',desc:'Équilibré · grille qui s\'adapte au nombre d\'articles',set:{coquesCols:0,figsCols:0,cardSize:'M',cardStyle:'standard',coqueFeat:false,figFeat:true,homeCoquesN:3,homeFigsN:4}},
-  vitrine:{label:'Vitrine',desc:'Premium · grandes cartes 3 col. + coque & figurine vedettes',set:{coquesCols:3,figsCols:3,cardSize:'L',cardStyle:'standard',coqueFeat:true,figFeat:true,homeCoquesN:3,homeFigsN:3}},
-  catalogue:{label:'Catalogue',desc:'Dense · petites cartes, beaucoup par rangée, sans vedette',set:{coquesCols:4,figsCols:4,cardSize:'S',cardStyle:'compact',coqueFeat:false,figFeat:false,homeCoquesN:4,homeFigsN:4}},
-  liste:{label:'Liste',desc:'Lignes horizontales · photo + infos côte à côte',set:{coquesCols:2,figsCols:2,cardSize:'M',cardStyle:'list',coqueFeat:false,figFeat:false,homeCoquesN:3,homeFigsN:4}}
+  standard:{label:'Standard',desc:'Grille adaptative, figurine vedette',coque:{cols:0,cardSize:'M',cardStyle:'standard',feat:false},fig:{cols:0,cardSize:'M',cardStyle:'standard',feat:true}},
+  vitrine:{label:'Vitrine',desc:'Grandes cartes + vedettes',coque:{cols:3,cardSize:'L',cardStyle:'standard',feat:true},fig:{cols:3,cardSize:'L',cardStyle:'standard',feat:true}},
+  catalogue:{label:'Catalogue',desc:'Dense, compact, sans vedette',coque:{cols:4,cardSize:'S',cardStyle:'compact',feat:false},fig:{cols:4,cardSize:'S',cardStyle:'compact',feat:false}},
+  liste:{label:'Liste',desc:'Lignes horizontales',coque:{cols:2,cardSize:'M',cardStyle:'list',feat:false},fig:{cols:2,cardSize:'M',cardStyle:'list',feat:false}},
+  vignettes:{label:'Vignettes',desc:'Image en avant, peu de texte',coque:{cols:0,cardSize:'M',cardStyle:'vignettes',feat:false},fig:{cols:0,cardSize:'M',cardStyle:'vignettes',feat:false}}
+};
+// Modèles d'accueil (appliqués à l'appareil courant)
+var HOME_MODELS={
+  classique:{label:'Classique',desc:'Stats + marquee + CTA',set:{coquesN:3,figsN:4,cardStyle:'standard',order:'coques',showStats:true,showMarquee:true,showCta:true}},
+  vitrine:{label:'Vitrine',desc:'Épuré, sans bandeau défilant',set:{coquesN:3,figsN:3,cardStyle:'standard',order:'coques',showStats:true,showMarquee:false,showCta:true}},
+  minimal:{label:'Minimal',desc:'Produits seuls',set:{coquesN:4,figsN:4,cardStyle:'compact',order:'coques',showStats:false,showMarquee:false,showCta:false}}
 };
 
 // ═══════════ ÉTAT ═══════════
@@ -484,7 +509,7 @@ function loadConfig(){
     }
     if(cfg&&cfg.content)Object.assign(state.content,cfg.content);
     if(cfg&&cfg.settings)state.settings=cfg.settings;
-    state.layout=Object.assign(layoutDefaults(),(cfg&&cfg.settings&&cfg.settings.layout)||{});
+    state.layout=migrateLayout(cfg&&cfg.settings&&cfg.settings.layout);
   }).catch(function(){}).then(function(){
     return api('/admin/promos').then(function(d){state.promos=Array.isArray(d.promos)?d.promos:[];}).catch(function(){state.promos=[];});
   }).then(function(){
@@ -672,6 +697,7 @@ function drClearModel(){var p=findP(drawerCtx.type,drawerCtx.id);if(!p.model)ret
 
 // ═══════════ DISPOSITION ═══════════
 var lpDev='desktop';
+function curEdit(){return state.layout[lpDev]||state.layout.desktop;}
 function renderLayout(){
   var wrap=document.getElementById('layoutPanel');if(!wrap)return;
   wrap.innerHTML=
@@ -688,7 +714,7 @@ function renderLayout(){
         '<div id="lp-wrap" style="position:relative;width:100%;overflow:hidden;border:1px solid var(--b2);border-radius:8px;background:var(--bg)">'+
           '<iframe id="lp-frame" src="index.html#fcpreview" onload="lpReady()" style="width:1280px;height:900px;border:0;display:block;transform-origin:top left"></iframe>'+
         '</div>'+
-        '<div class="muted mono" style="font-size:.56rem;margin-top:6px">Aperçu non publié · « Publier » applique aux visiteurs. Les modèles personnalisent l\'ordinateur ; le téléphone garde son agencement « app ».</div>'+
+        '<div class="muted mono" style="font-size:.56rem;margin-top:6px">Réglages 100% indépendants Ordinateur / Téléphone (bascule en haut). Aperçu non publié · « Publier » applique aux visiteurs.</div>'+
       '</div></div>'+
     '</div>';
   renderControls();
@@ -696,37 +722,50 @@ function renderLayout(){
 }
 function renderControls(){
   var box=document.getElementById('lpControls');if(!box)return;
-  var L=state.layout;
-  function colSel(field){var opts=[['0','Auto (intelligent)'],['2','2 colonnes'],['3','3 colonnes'],['4','4 colonnes'],['5','5 colonnes']];return '<select class="f-inp" onchange="layoutEdit(\''+field+'\',this.value)">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(L[field]||0)===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
-  function sizeSel(){return '<select class="f-inp" onchange="layoutEdit(\'cardSize\',this.value)">'+[['S','Petites'],['M','Moyennes'],['L','Grandes']].map(function(o){return '<option value="'+o[0]+'"'+(L.cardSize===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
-  function styleSel(){return '<select class="f-inp" onchange="layoutEdit(\'cardStyle\',this.value)">'+[['standard','Cartes'],['compact','Compact'],['list','Liste (lignes)']].map(function(o){return '<option value="'+o[0]+'"'+(L.cardStyle===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
-  function prodSel(field,list){return '<select class="f-inp" onchange="layoutEdit(\''+field+'\',this.value)"><option value="">Auto (1er produit)</option>'+list.filter(function(p){return !p.archived;}).map(function(p){return '<option value="'+p.id+'"'+(String(L[field])===String(p.id)?' selected':'')+'>'+esc(p.name||('#'+p.id))+'</option>';}).join('')+'</select>';}
-  function num(field,def){return '<input class="f-inp" type="number" min="1" max="8" value="'+(L[field]||def)+'" onchange="layoutEdit(\''+field+'\',this.value)">';}
-  var models=Object.keys(MODELS).map(function(k){var m=MODELS[k];return '<button class="lp-model'+(L.model===k?' on':'')+'" onclick="applyModel(\''+k+'\')"><b>'+m.label+'</b><span>'+m.desc+'</span></button>';}).join('');
+  var E=curEdit(), devLbl=(lpDev==='phone'?'Téléphone':'Ordinateur');
+  function colSel(t){var c=E[t];var opts=[['0','Auto'],['1','1 colonne'],['2','2 colonnes'],['3','3 colonnes'],['4','4 colonnes'],['5','5 colonnes']];return '<select class="f-inp" onchange="te(\''+t+'\',\'cols\',this.value)">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(c.cols||0)===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
+  function sizeSel(t){var c=E[t];return '<select class="f-inp" onchange="te(\''+t+'\',\'cardSize\',this.value)">'+[['S','Petites'],['M','Moyennes'],['L','Grandes']].map(function(o){return '<option value="'+o[0]+'"'+(c.cardSize===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
+  function styleSel(t){var c=E[t];return '<select class="f-inp" onchange="te(\''+t+'\',\'cardStyle\',this.value)">'+[['standard','Cartes'],['compact','Compact'],['list','Liste'],['vignettes','Vignettes']].map(function(o){return '<option value="'+o[0]+'"'+(c.cardStyle===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
+  function prodSel(t,list){var c=E[t];return '<select class="f-inp" onchange="te(\''+t+'\',\'featId\',this.value)"><option value="">Auto (1er produit)</option>'+list.filter(function(p){return !p.archived;}).map(function(p){return '<option value="'+p.id+'"'+(String(c.featId)===String(p.id)?' selected':'')+'>'+esc(p.name||('#'+p.id))+'</option>';}).join('')+'</select>';}
+  function typeCard(t,title,list){var c=E[t];return '<div class="card"><div class="card-h">'+title+'</div>'+
+    '<div class="frow2"><div class="frow"><label class="f-lbl">Colonnes</label>'+colSel(t)+'</div>'+
+      '<div class="frow"><label class="f-lbl">Taille</label>'+sizeSel(t)+'</div></div>'+
+    '<div class="frow" style="margin-top:.7rem"><label class="f-lbl">Type de carte</label>'+styleSel(t)+'</div>'+
+    '<label class="chk" style="margin-top:.8rem"><input type="checkbox"'+(c.feat?' checked':'')+' onchange="te(\''+t+'\',\'feat\',this.checked)"> Vedette en grand en haut de page</label>'+
+    '<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Laquelle ?</label>'+prodSel(t,list)+'</div></div>';}
+  function styleOpts(v){return [['standard','Cartes'],['compact','Compact'],['list','Liste'],['vignettes','Vignettes']].map(function(o){return '<option value="'+o[0]+'"'+(v===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');}
+  var H=E.home||{};
+  var models=Object.keys(MODELS).map(function(k){var m=MODELS[k];return '<button class="lp-model'+(E.model===k?' on':'')+'" onclick="applyModel(\''+k+'\')"><b>'+m.label+'</b><span>'+m.desc+'</span></button>';}).join('');
+  var hmodels=Object.keys(HOME_MODELS).map(function(k){var m=HOME_MODELS[k];return '<button class="lp-model'+(H.model===k?' on':'')+'" onclick="applyHomeModel(\''+k+'\')"><b>'+m.label+'</b><span>'+m.desc+'</span></button>';}).join('');
   box.innerHTML=
-    '<div class="card"><div class="card-h">Modèle '+(L.model?'':'<span class="pill warn">personnalisé</span>')+'</div>'+
+    '<div class="card" style="border-color:rgba(255,32,96,.32)"><div class="card-h" style="font-size:1rem">Réglages : <span style="color:var(--pink2)">'+devLbl+'</span></div>'+
+      '<div class="hint">Bascule <b>Ordinateur / Téléphone</b> (en haut de l\'aperçu) pour configurer chaque appareil séparément. Coques et figurines sont réglables indépendamment.</div></div>'+
+    '<div class="card"><div class="card-h">Modèle '+(E.model?'':'<span class="pill warn">perso</span>')+'</div>'+
       '<div class="lp-models">'+models+'</div>'+
-      '<div class="hint" style="margin-top:.7rem">Choisis un modèle, puis affine les réglages ci-dessous. Toute modif manuelle passe en « personnalisé ».</div></div>'+
-    '<div class="card"><div class="card-h">Grilles produits</div>'+
-      '<div class="frow2"><div class="frow"><label class="f-lbl">Colonnes — Coques</label>'+colSel('coquesCols')+'</div>'+
-        '<div class="frow"><label class="f-lbl">Colonnes — Figurines</label>'+colSel('figsCols')+'</div></div>'+
-      '<div class="frow2" style="margin-top:.8rem"><div class="frow"><label class="f-lbl">Taille des cartes</label>'+sizeSel()+'</div>'+
-        '<div class="frow"><label class="f-lbl">Style des cartes</label>'+styleSel()+'</div></div></div>'+
-    '<div class="card"><div class="card-h">Article vedette (en grand, en haut de page)</div>'+
-      '<label class="chk"><input type="checkbox"'+(L.coqueFeat?' checked':'')+' onchange="layoutEdit(\'coqueFeat\',this.checked)"> Mettre une coque en vedette (page Coques)</label>'+
-      '<div class="frow" style="margin:.5rem 0 1rem"><label class="f-lbl">Quelle coque ?</label>'+prodSel('coqueFeatId',state.coques)+'</div>'+
-      '<label class="chk"><input type="checkbox"'+(L.figFeat?' checked':'')+' onchange="layoutEdit(\'figFeat\',this.checked)"> Mettre une figurine en vedette (page Figurines)</label>'+
-      '<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Quelle figurine ?</label>'+prodSel('figFeatId',state.figs)+'</div></div>'+
-    '<div class="card"><div class="card-h">Page d\'accueil — produits mis en avant</div>'+
-      '<div class="frow2"><div class="frow"><label class="f-lbl">Nb de coques</label>'+num('homeCoquesN',3)+'</div>'+
-        '<div class="frow"><label class="f-lbl">Nb de figurines</label>'+num('homeFigsN',4)+'</div></div></div>';
+      '<div class="hint" style="margin-top:.7rem">Applique un préréglage aux 2 grilles, puis affine ci-dessous (le nombre de colonnes, etc. restent libres).</div></div>'+
+    typeCard('coque','Coques',state.coques)+
+    typeCard('fig','Figurines',state.figs)+
+    '<div class="card"><div class="card-h">Accueil — '+devLbl+'</div>'+
+      '<div class="lp-models" style="margin-bottom:.9rem">'+hmodels+'</div>'+
+      '<div class="frow2"><div class="frow"><label class="f-lbl">Nb de coques</label><input class="f-inp" type="number" min="1" max="8" value="'+(H.coquesN||3)+'" onchange="he(\'coquesN\',this.value)"></div>'+
+        '<div class="frow"><label class="f-lbl">Nb de figurines</label><input class="f-inp" type="number" min="1" max="8" value="'+(H.figsN||4)+'" onchange="he(\'figsN\',this.value)"></div></div>'+
+      '<div class="frow2" style="margin-top:.7rem"><div class="frow"><label class="f-lbl">Type de carte</label><select class="f-inp" onchange="he(\'cardStyle\',this.value)">'+styleOpts(H.cardStyle||'standard')+'</select></div>'+
+        '<div class="frow"><label class="f-lbl">Ordre</label><select class="f-inp" onchange="he(\'order\',this.value)"><option value="coques"'+((H.order||'coques')==='coques'?' selected':'')+'>Coques d\'abord</option><option value="figs"'+(H.order==='figs'?' selected':'')+'>Figurines d\'abord</option></select></div></div>'+
+      '<div style="margin-top:.9rem;display:flex;flex-direction:column;gap:7px">'+
+        '<label class="chk"><input type="checkbox"'+(H.showStats!==false?' checked':'')+' onchange="he(\'showStats\',this.checked)"> Bandeau de stats (+200, 100%…)</label>'+
+        '<label class="chk"><input type="checkbox"'+(H.showMarquee!==false?' checked':'')+' onchange="he(\'showMarquee\',this.checked)"> Bandeau défilant</label>'+
+        '<label class="chk"><input type="checkbox"'+(H.showCta!==false?' checked':'')+' onchange="he(\'showCta\',this.checked)"> Bloc « Ta coque, tes règles »</label>'+
+      '</div></div>';
 }
-function applyModel(key){var m=MODELS[key];if(!m)return;Object.assign(state.layout,m.set,{model:key});markDirty();renderControls();lpPostCfg();toast('Modèle « '+m.label+' » appliqué');}
+function applyModel(key){var m=MODELS[key];if(!m)return;var E=curEdit();Object.assign(E.coque,m.coque);Object.assign(E.fig,m.fig);E.model=key;markDirty();renderControls();lpPostCfg();toast('Modèle « '+m.label+' » — '+(lpDev==='phone'?'Téléphone':'Ordinateur'));}
+function applyHomeModel(key){var m=HOME_MODELS[key];if(!m)return;Object.assign(curEdit().home,m.set,{model:key});markDirty();renderControls();lpPostCfg();toast('Accueil « '+m.label+' »');}
+function te(t,field,val){if(field==='cols')val=parseInt(val,10)||0;else if(field==='featId')val=(val===''||val==null)?null:parseInt(val,10);curEdit()[t][field]=val;curEdit().model='';markDirty();renderControls();lpPostCfg();}
+function he(field,val){if(field==='coquesN'||field==='figsN')val=Math.max(1,Math.min(8,parseInt(val,10)||1));curEdit().home[field]=val;if(field!=='model')curEdit().home.model='';markDirty();renderControls();lpPostCfg();}
 // ── Aperçu live : iframe du site (#fcpreview) piloté par postMessage ──
 function lpFrame(){return document.getElementById('lp-frame');}
 function lpPostCfg(){var f=lpFrame();if(f&&f.contentWindow){try{f.contentWindow.postMessage({type:'fc-preview',cfg:buildConfig()},'*');}catch(_){}}}
 function lpGoto(page,btn){var f=lpFrame();if(f&&f.contentWindow){try{f.contentWindow.postMessage({type:'fc-goto',page:page},'*');}catch(_){}}document.querySelectorAll('.lp-tab').forEach(function(t){t.classList.toggle('on',t===btn);});}
-function lpSetDevice(dev,btn){lpDev=dev;document.querySelectorAll('.lp-dev').forEach(function(b){b.classList.toggle('on',b===btn);});lpScale();}
+function lpSetDevice(dev,btn){lpDev=dev;document.querySelectorAll('.lp-dev').forEach(function(b){b.classList.toggle('on',b===btn);});renderControls();lpScale();lpPostCfg();}
 function lpScale(){
   var w=document.getElementById('lp-wrap'),f=lpFrame();if(!w||!f||!w.clientWidth)return;
   if(lpDev==='phone'){
@@ -745,12 +784,6 @@ function lpScale(){
 function lpReady(){lpScale();lpPostCfg();lpGoto('coques',document.querySelector('.lp-tab'));}
 window.addEventListener('message',function(e){if(e.data&&e.data.type==='fc-ready')lpPostCfg();});
 window.addEventListener('resize',lpScale);
-function layoutEdit(field,val){
-  if(['coquesCols','figsCols'].indexOf(field)>=0)val=parseInt(val,10)||0;
-  else if(['homeCoquesN','homeFigsN'].indexOf(field)>=0)val=Math.max(1,Math.min(8,parseInt(val,10)||1));
-  else if(field==='coqueFeatId'||field==='figFeatId')val=(val===''||val==null)?null:parseInt(val,10);
-  state.layout[field]=val;state.layout.model='';markDirty();renderControls();lpPostCfg();
-}
 
 // ═══════════ CODES PROMO ═══════════
 function renderPromos(){

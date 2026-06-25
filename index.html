@@ -197,16 +197,7 @@ input,textarea,select{font-family:inherit}
 .cname{font-size:1rem;font-weight:600;color:var(--fg);margin-bottom:5px;line-height:1.25}
 .cdesc{font-size:.79rem;color:var(--fg2);line-height:1.55;margin-bottom:.95rem;font-weight:300}
 .cfoot{display:flex;align-items:center;justify-content:space-between}
-/* ── Styles de carte (modèles de disposition, desktop) ── */
-[data-cs="compact"] .cdesc{display:none}
-[data-cs="compact"] .card-body{padding:.6rem .8rem .8rem}
-[data-cs="compact"] .card-art{aspect-ratio:1.25}
-[data-cs="compact"] .card-art-fig{aspect-ratio:1}
-[data-cs="compact"] .cname{font-size:.9rem}
-[data-cs="list"] .card{display:grid;grid-template-columns:120px 1fr;align-items:stretch}
-[data-cs="list"] .card-art,[data-cs="list"] .card-art-fig{aspect-ratio:auto;height:100%;min-height:150px}
-[data-cs="list"] .card-body{padding:.9rem 1.1rem;display:flex;flex-direction:column;justify-content:center}
-[data-cs="list"] .cdesc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:.7rem}
+/* Styles de carte (data-cs) définis en fin de feuille pour gagner aussi en mode mobile */
 .cprice{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--fg);letter-spacing:.03em}
 .cprice .curr{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--fg3);font-weight:300}
 .cprice.c{color:var(--cyan)}.cprice.p{color:var(--purple2)}
@@ -679,6 +670,23 @@ html.m .card-art-fig{aspect-ratio:.85}
 html.m .section{padding-left:.9rem;padding-right:.9rem}
 /* Sur écran large en mode app (tablette), on revient à un confort 3 colonnes */
 @media(min-width:680px){html.m .g3,html.m .g4{grid-template-columns:repeat(3,1fr);gap:1rem}}
+
+/* ═══ Styles de carte (data-cs) — modèles de disposition, valables desktop ET mobile ═══ */
+html [data-cs="compact"] .cdesc{display:none}
+html [data-cs="compact"] .card-body{padding:.55rem .72rem .7rem}
+html [data-cs="compact"] .card-art{aspect-ratio:1.25}
+html [data-cs="compact"] .card-art-fig{aspect-ratio:1}
+html [data-cs="compact"] .cname{font-size:.88rem;margin-bottom:3px}
+html [data-cs="list"] .card{display:grid;grid-template-columns:118px 1fr;align-items:stretch}
+html [data-cs="list"] .card-art,html [data-cs="list"] .card-art-fig{aspect-ratio:auto;height:100%;min-height:140px}
+html [data-cs="list"] .card-body{padding:.85rem 1rem;display:flex;flex-direction:column;justify-content:center}
+html [data-cs="list"] .cdesc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:.6rem}
+html [data-cs="vignettes"] .cdesc,html [data-cs="vignettes"] .ccat{display:none}
+html [data-cs="vignettes"] .card-art{aspect-ratio:1}
+html [data-cs="vignettes"] .card-art-fig{aspect-ratio:.82}
+html [data-cs="vignettes"] .card-body{padding:.5rem .72rem .62rem}
+html [data-cs="vignettes"] .cname{font-size:.84rem;margin-bottom:2px;line-height:1.15}
+html [data-cs="vignettes"] .cprice{font-size:1.15rem}
 </style>
 </head>
 <body>
@@ -746,7 +754,7 @@ html.m .section{padding-left:.9rem;padding-right:.9rem}
 
     <div class="marquee-wrap"><div class="marquee-track" id="mqTrack"></div></div>
 
-    <section class="section">
+    <section class="section" id="home-sec-coques">
       <div class="sec-head">
         <div><div class="sec-tag">Nouveautés</div><div class="sec-h2">Coques <span class="ep">briquet</span></div></div>
         <button class="link-more" onclick="goto('coques')">Tout voir →</button>
@@ -754,7 +762,7 @@ html.m .section{padding-left:.9rem;padding-right:.9rem}
       <div class="g3" id="home-coques"></div>
     </section>
 
-    <section class="section section-alt">
+    <section class="section section-alt" id="home-sec-figs">
       <div class="sec-head">
         <div><div class="sec-tag p">Éditions limitées</div><div class="sec-h2">Figurines <span class="epu">3D</span></div></div>
         <button class="link-more" onclick="goto('figurines')">Tout voir →</button>
@@ -1180,38 +1188,72 @@ let ALL_PRODS = [...COQUES,...FIGS];
 let cart=[]; // [{type:'coque'|'fig', id, qty}]
 
 // ── DISPOSITION (réglable depuis le dashboard, appliquée en direct) ──
-var LAYOUT={coquesCols:0,figsCols:0,cardSize:'M',cardStyle:'standard',model:'standard',homeCoquesN:3,homeFigsN:4,coqueFeat:false,coqueFeatId:null,figFeat:true,figFeatId:null};
-function cardMinMax(){
-  if(LAYOUT.cardStyle==='list')return [300,560];
-  return {S:[188,224],M:[230,288],L:[280,344]}[LAYOUT.cardSize]||[230,288];
-}
-function applyGrid(el,type){
-  if(!el)return;
-  // Mobile : on garde l'agencement « app » optimisé (les modèles ne s'appliquent qu'au desktop)
-  if(document.documentElement.classList.contains('m')){
-    el.style.gridTemplateColumns='';el.style.maxWidth='';el.style.justifyContent='';
-    el.setAttribute('data-cs','standard');return;
+// Réglages INDÉPENDANTS par appareil (desktop/phone) × type d'objet (coque/fig) + accueil par appareil
+function typeDefs(isFig){return {cols:0,cardSize:'M',cardStyle:'standard',feat:!!isFig,featId:null};}
+function homeDefs(){return {model:'classique',coquesN:3,figsN:4,cardStyle:'standard',order:'coques',showStats:true,showMarquee:true,showCta:true};}
+function devDefs(isPhone){var d={model:'standard',coque:typeDefs(false),fig:typeDefs(true),home:homeDefs()};
+  if(isPhone){d.coque.cols=2;d.fig.cols=2;d.fig.feat=false;d.home.coquesN=2;d.home.figsN=2;}
+  return d;}
+function layoutDefs(){return {desktop:devDefs(false),phone:devDefs(true)};}
+var LAYOUT=layoutDefs();
+function curDev(){return document.documentElement.classList.contains('m')?'phone':'desktop';}
+function dcfg(){return LAYOUT[curDev()]||LAYOUT.desktop;}
+function tcfg(type){var d=dcfg();return (type==='coque')?d.coque:d.fig;}
+function migrateLayout(raw){
+  var L=layoutDefs();
+  if(!raw||typeof raw!=='object')return L;
+  if(raw.desktop||raw.phone){            // nouveau format → fusion profonde
+    ['desktop','phone'].forEach(function(dv){var r=raw[dv];if(!r)return;if(r.model!=null)L[dv].model=r.model;
+      ['coque','fig'].forEach(function(t){if(r[t])Object.assign(L[dv][t],r[t]);});
+      if(r.home)Object.assign(L[dv].home,r.home);});
+    return L;
   }
-  el.setAttribute('data-cs',LAYOUT.cardStyle||'standard');
-  var cols=(type==='coque')?LAYOUT.coquesCols:LAYOUT.figsCols, mm=cardMinMax(), gap=24;
-  var custom=(LAYOUT.cardStyle!=='standard'||LAYOUT.cardSize!=='M');
-  if(cols&&cols>=1){                                   // colonnes fixes choisies
-    el.style.gridTemplateColumns='repeat('+cols+',minmax('+mm[0]+'px,'+mm[1]+'px))';
-    el.style.maxWidth=(cols*mm[1]+(cols-1)*gap)+'px';
-    el.style.justifyContent='center';
+  // ancien format plat → desktop
+  var d=L.desktop;d.model=raw.model||'';
+  d.coque={cols:raw.coquesCols||0,cardSize:raw.cardSize||'M',cardStyle:raw.cardStyle||'standard',feat:!!raw.coqueFeat,featId:(raw.coqueFeatId==null?null:raw.coqueFeatId)};
+  d.fig={cols:raw.figsCols||0,cardSize:raw.cardSize||'M',cardStyle:raw.cardStyle||'standard',feat:(raw.figFeat!==false),featId:(raw.figFeatId==null?null:raw.figFeatId)};
+  if(raw.homeCoquesN!=null)d.home.coquesN=raw.homeCoquesN;
+  if(raw.homeFigsN!=null)d.home.figsN=raw.homeFigsN;
+  return L;
+}
+function cardMinMax(c){if(c.cardStyle==='list')return [300,560];return {S:[188,224],M:[230,288],L:[280,344]}[c.cardSize]||[230,288];}
+function applyGridCfg(el,c,phone){
+  if(!el)return;
+  el.setAttribute('data-cs',c.cardStyle||'standard');
+  var mm=cardMinMax(c), gap=24, cols=c.cols;
+  if(phone&&c.cardStyle==='list')cols=1;               // liste sur téléphone = 1 produit/ligne
+  if(cols&&cols>=1){
+    var track=phone?'minmax(0,1fr)':'minmax('+mm[0]+'px,'+mm[1]+'px)';
+    el.style.gridTemplateColumns='repeat('+cols+','+track+')';
+    el.style.maxWidth=phone?'':(cols*mm[1]+(cols-1)*gap)+'px';
+    el.style.justifyContent=phone?'':'center';
     el.removeAttribute('data-n');
-  } else if(custom){                                   // auto-colonnes, taille/style perso
+  } else if(!phone&&(c.cardStyle!=='standard'||c.cardSize!=='M')){
     el.style.gridTemplateColumns='repeat(auto-fit,minmax('+mm[0]+'px,'+mm[1]+'px))';
     el.style.justifyContent='center';el.style.maxWidth='';
-  } else {                                             // défaut : CSS auto (data-n)
+  } else {                                             // défaut : CSS auto (desktop data-n / mobile 2-col)
     el.style.gridTemplateColumns='';el.style.maxWidth='';el.style.justifyContent='';
   }
 }
-function applyAllGrids(){applyGrid(document.getElementById('home-coques'),'coque');applyGrid(document.getElementById('home-figs'),'fig');applyGrid(document.getElementById('coques-grid'),'coque');applyGrid(document.getElementById('figs-grid'),'fig');}
-window.addEventListener('resize',function(){applyAllGrids();});
+function applyAllGrids(){
+  var d=dcfg(), phone=(curDev()==='phone'), hcs={cols:0,cardSize:'M',cardStyle:(d.home&&d.home.cardStyle)||'standard'};
+  applyGridCfg(document.getElementById('home-coques'),hcs,phone);
+  applyGridCfg(document.getElementById('home-figs'),hcs,phone);
+  applyGridCfg(document.getElementById('coques-grid'),d.coque,phone);
+  applyGridCfg(document.getElementById('figs-grid'),d.fig,phone);
+}
+function applyHome(){
+  var H=dcfg().home||homeDefs(), home=document.getElementById('page-home');if(!home)return;
+  var sb=home.querySelector('.stats-bar');if(sb)sb.style.display=(H.showStats===false)?'none':'';
+  var mq=home.querySelector('.marquee-wrap');if(mq)mq.style.display=(H.showMarquee===false)?'none':'';
+  var ct=home.querySelector('.cta-band');if(ct)ct.style.display=(H.showCta===false)?'none':'';
+  var sc=document.getElementById('home-sec-coques'),sf=document.getElementById('home-sec-figs');
+  if(sc&&sf&&sc.parentNode){if(H.order==='figs')sc.parentNode.insertBefore(sf,sc);else sc.parentNode.insertBefore(sc,sf);}
+}
+var _rezT;window.addEventListener('resize',function(){clearTimeout(_rezT);_rezT=setTimeout(function(){renderAll();},170);});
 function liveList(type){return (type==='coque'?COQUES:FIGS).filter(function(d){return !d.archived;});}
 function pickFeatured(list,id){if(id!=null){var f=list.find(function(p){return p.id===id&&!p.archived;});if(f)return f;}return list.find(function(p){return !p.archived;})||list[0];}
-function featuredFor(type){if(!((type==='coque')?LAYOUT.coqueFeat:LAYOUT.figFeat))return null;return pickFeatured(liveList(type),(type==='coque')?LAYOUT.coqueFeatId:LAYOUT.figFeatId);}
+function featuredFor(type){var c=tcfg(type);if(!c.feat)return null;return pickFeatured(liveList(type),c.featId);}
 function gridList(type){var live=liveList(type),f=featuredFor(type);return (f&&live.length>1)?live.filter(function(p){return p!==f;}):live;}
 // Bloc « vedette » générique (gros article en haut), réutilisé coques + figurines
 function featuredHTML(type,p){
@@ -1376,8 +1418,9 @@ function renderAll(){
   document.getElementById('mqTrack').innerHTML=dup.map(t=>`<span class="marquee-item"><span class="mdot"></span>${t}</span>`).join('');
   // home grids — teaser : produits « mis en avant » d'abord, complétés au nombre choisi (Disposition)
   function homePick(list,n){var f=list.filter(function(d){return d.home;});return f.concat(list.filter(function(d){return !d.home;})).slice(0,Math.max(1,n||3));}
-  var homeCoques=homePick(liveList('coque'),LAYOUT.homeCoquesN);
-  var homeFigs=homePick(liveList('fig'),LAYOUT.homeFigsN);
+  var H=dcfg().home||homeDefs();
+  var homeCoques=homePick(liveList('coque'),H.coquesN);
+  var homeFigs=homePick(liveList('fig'),H.figsN);
   document.getElementById('home-coques').innerHTML=homeCoques.map(d=>renderCoque(d)).join('');document.getElementById('home-coques').dataset.n=homeCoques.length;
   document.getElementById('home-figs').innerHTML=homeFigs.map(renderFig).join('');document.getElementById('home-figs').dataset.n=homeFigs.length;
   // coques page (exclut la coque vedette si activée)
@@ -1390,6 +1433,7 @@ function renderAll(){
   // figurines page
   renderFigsPage();
   applyAllGrids();
+  applyHome();
 }
 
 function renderFigsPage(){
@@ -1397,7 +1441,7 @@ function renderFigsPage(){
   var fe=document.getElementById('fig-feature');
   if(fe){ if(f){fe.style.display='';fe.innerHTML=featuredHTML('fig',f);}else{fe.style.display='none';fe.innerHTML='';} }
   var gf=gridList('fig');
-  var g=document.getElementById('figs-grid');g.innerHTML=gf.map(renderFig).join('');g.dataset.n=gf.length;applyGrid(g,'fig');
+  var g=document.getElementById('figs-grid');g.innerHTML=gf.map(renderFig).join('');g.dataset.n=gf.length;applyGridCfg(g,tcfg('fig'),curDev()==='phone');
 }
 
 // ═══ NAVIGATION ═══
@@ -1425,7 +1469,7 @@ function filterCoques(theme,el){
   var base=gridList('coque');
   var show=theme==='Tout'?base:base.filter(function(d){return d.cat.includes(theme)||d.cat===theme;});
   var _shown=(theme==='Tout'?base:(show.length?show:base));
-  var g=document.getElementById('coques-grid');g.innerHTML=_shown.map(d=>renderCoque(d)).join('');g.dataset.n=_shown.length;applyGrid(g,'coque');
+  var g=document.getElementById('coques-grid');g.innerHTML=_shown.map(d=>renderCoque(d)).join('');g.dataset.n=_shown.length;applyGridCfg(g,tcfg('coque'),curDev()==='phone');
 }
 
 // ═══ CART ═══
@@ -2489,7 +2533,7 @@ function fcApplyConfig(cfg){
     ALL_PRODS=[].concat(COQUES,FIGS);
   }
   // Disposition (réglée dans le dashboard → settings.layout)
-  if(cfg.settings&&cfg.settings.layout&&typeof cfg.settings.layout==='object'){Object.assign(LAYOUT,cfg.settings.layout);}
+  if(cfg.settings&&cfg.settings.layout&&typeof cfg.settings.layout==='object'){LAYOUT=migrateLayout(cfg.settings.layout);}
   var c=cfg.content||{};
   fcSetTxt('h-eye',c.eyebrow);fcSetTxt('h-l1',c.h1);fcSetTxt('h-l2',c.h2);fcSetTxt('h-l3',c.h3);
   fcSetTxt('h-desc',c.desc);fcSetTxt('h-b1',c.btn1);fcSetTxt('h-b2',c.btn2);
