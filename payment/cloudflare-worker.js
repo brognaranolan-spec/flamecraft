@@ -90,7 +90,7 @@ export default {
       // ───────── Admin (token requis) ─────────
       if (path.startsWith("/admin/")) {
         if (!env.ADMIN_TOKEN) return json({ error: "ADMIN_TOKEN non configuré" }, 500, cors);
-        if ((request.headers.get("X-Admin-Token") || "") !== env.ADMIN_TOKEN) {
+        if (!safeEq(request.headers.get("X-Admin-Token"), env.ADMIN_TOKEN)) {
           return json({ error: "Token admin invalide" }, 401, cors);
         }
         if (request.method === "GET" && path === "/admin/ping") return json({ ok: true }, 200, cors);
@@ -222,10 +222,10 @@ async function getModel(env, key, cors) {
   const safe = key.replace(/[^a-zA-Z0-9:_.-]/g, "");
   const res = await env.KV.getWithMetadata("model:" + safe, { type: "arrayBuffer" });
   if (!res || !res.value) return json({ error: "Modèle introuvable" }, 404, cors);
-  const ct = (res.metadata && res.metadata.ct) || "application/octet-stream";
+  const ct = safeCT(res.metadata && res.metadata.ct);
   return new Response(res.value, {
     status: 200,
-    headers: Object.assign({}, cors, { "Content-Type": ct, "Cache-Control": "public, max-age=86400" })
+    headers: Object.assign({}, cors, { "Content-Type": ct, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=86400" })
   });
 }
 async function putModel(request, env, key, cors) {
@@ -234,7 +234,7 @@ async function putModel(request, env, key, cors) {
   const buf = await request.arrayBuffer();
   if (buf.byteLength === 0) return json({ error: "Fichier vide" }, 400, cors);
   if (buf.byteLength > MAX_MODEL_BYTES) return json({ error: "Fichier trop volumineux (max 9 Mo)" }, 413, cors);
-  const ct = request.headers.get("Content-Type") || "application/octet-stream";
+  const ct = safeCT(request.headers.get("Content-Type"));
   await env.KV.put("model:" + safe, buf, { metadata: { ct, size: buf.byteLength, at: Date.now() } });
   return json({ ok: true, key: safe, size: buf.byteLength }, 200, cors);
 }
@@ -571,6 +571,21 @@ function parseItemsMeta(s){
 }
 
 // ───────────────────────── Sécurité / RGPD ─────────────────────────
+// Comparaison à temps constant (évite les attaques temporelles sur le token admin).
+function safeEq(a, b){
+  a = String(a == null ? "" : a); b = String(b == null ? "" : b);
+  if (a.length !== b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+// Neutralise un Content-Type dangereux pour les fichiers servis (anti-XSS stockée).
+function safeCT(ct){
+  ct = String(ct == null ? "" : ct).split(";")[0].trim().toLowerCase();
+  if (!ct || ct.indexOf("html") >= 0 || ct.indexOf("script") >= 0 || ct.indexOf("xml") >= 0) return "application/octet-stream";
+  if (/^(image\/(png|jpe?g|webp|gif|avif)|application\/octet-stream|text\/plain|application\/sla|model\/)/.test(ct)) return ct;
+  return "application/octet-stream";
+}
 function corsFor(request, env){
   var allowed = (env.ALLOWED_ORIGIN || "").split(",").map(function(s){ return s.trim(); }).filter(Boolean);
   var origin = request.headers.get("Origin") || "";

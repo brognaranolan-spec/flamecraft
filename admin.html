@@ -782,7 +782,7 @@ function lpScale(){
   }
 }
 function lpReady(){lpScale();lpPostCfg();lpGoto('coques',document.querySelector('.lp-tab'));}
-window.addEventListener('message',function(e){if(e.data&&e.data.type==='fc-ready')lpPostCfg();});
+window.addEventListener('message',function(e){if(e.origin===location.origin&&e.data&&e.data.type==='fc-ready')lpPostCfg();});
 window.addEventListener('resize',lpScale);
 
 // ═══════════ CODES PROMO ═══════════

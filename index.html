@@ -1216,7 +1216,6 @@ const FIGS = [
   {id:2,name:'Robo Chibi',cat:'Tech kawaii',desc:'Robot kawaii avec tête-écran translucide. Édition collab exclusive.',price:'26.00',badge:'col',theme:'c',h:'8 cm',mat:'PETG Fumé',stock:35,model:''},
   {id:3,name:'Dark Elf #03',cat:'Dark fantasy',desc:'Elfe ténébreux aux oreilles pointues. Peint à la main. Limité 15 pièces.',price:'38.00',badge:'lim',theme:'pu',h:'10 cm',mat:'Résine UV',stock:15,model:''},
 ];
-let ALL_PRODS = [...COQUES,...FIGS];
 let cart=[]; // [{type:'coque'|'fig', id, qty}]
 
 // ── DISPOSITION (réglable depuis le dashboard, appliquée en direct) ──
@@ -1576,15 +1575,6 @@ function addToCart(type,id,qty){
   if(document.getElementById('page-cart').classList.contains('active'))renderCart();
 }
 
-// Wrapper rétro-compatible (utilisé par le jeu) — résout le produit par son nom
-function addCart(name,theme){
-  let p=COQUES.find(x=>x.name===name);
-  if(p){addToCart('coque',p.id);return;}
-  p=FIGS.find(x=>x.name===name);
-  if(p){addToCart('fig',p.id);return;}
-  const t={p:'pk',c:'cy',pu:'pu'}[theme]||'pk';
-  showToast(name+' ajouté au panier',t);
-}
 
 function cartSetQty(type,id,delta){
   const it=cart.find(c=>c.type===type&&c.id===id); if(!it)return;
@@ -2574,7 +2564,6 @@ function fcApplyConfig(cfg){
         arr.push(Object.assign(base,ov,{id:id}));
       }
     });
-    ALL_PRODS=[].concat(COQUES,FIGS);
   }
   // Disposition (réglée dans le dashboard → settings.layout)
   if(cfg.settings&&cfg.settings.layout&&typeof cfg.settings.layout==='object'){LAYOUT=migrateLayout(cfg.settings.layout);}
@@ -2656,6 +2645,7 @@ var FC_PREVIEW = location.hash.indexOf('fcpreview') >= 0;
 if(FC_PREVIEW){
   document.documentElement.classList.add('fc-preview');
   window.addEventListener('message',function(e){
+    if(e.origin!==location.origin)return;                 // sécurité : n'accepte que le dashboard (même origine)
     var d=e.data||{};
     if(d.type==='fc-preview'&&d.cfg){try{fcApplyConfig(d.cfg);}catch(_){}}
     else if(d.type==='fc-goto'&&d.page){try{goto(d.page);}catch(_){}}
