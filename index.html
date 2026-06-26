@@ -2746,18 +2746,21 @@ fcBootstrap();
   }
   // Mascotte (MOBILE) : les yeux baissent/lèvent selon le SENS du scroll (pas de souris au tactile)
   (function(){
-    var lastY=window.scrollY||window.pageYOffset||0, vel=0, cur=0, running=false;
+    var lastY=window.scrollY||window.pageYOffset||0, hold=0, holdUntil=0, cur=0, running=false;
     function mob(){return document.documentElement.classList.contains('m');}
     function loop(){
-      cur+=(vel-cur)*0.18; vel*=0.85;
-      hcPupils(0, cur*4);
-      if(Math.abs(cur)>0.02||Math.abs(vel)>0.02){requestAnimationFrame(loop);}
-      else{hcPupils(0,0);running=false;}
+      var target=(hcNow()<holdUntil)?hold:0;              // regarde dans le sens du scroll, sinon revient au centre
+      cur+=(target-cur)*0.26;
+      hcPupils(0, cur*4.5);
+      if(hcNow()<holdUntil||Math.abs(cur)>0.015){requestAnimationFrame(loop);}
+      else{cur=0;hcPupils(0,0);running=false;}
     }
     window.addEventListener('scroll',function(){
       var y=window.scrollY||window.pageYOffset||0, d=y-lastY; lastY=y;
       if(!mob())return;                                   // PC : pupilles pilotées par la souris uniquement
-      hcWake(); vel=Math.max(-1,Math.min(1,d/26));        // scroll bas = pupilles bas (+), haut = pupilles haut (−)
+      hcWake();
+      if(d>0.5){hold=1;holdUntil=hcNow()+260;}            // scroll bas → pupilles bas
+      else if(d<-0.5){hold=-1;holdUntil=hcNow()+260;}     // scroll haut → pupilles haut (s'inverse aussitôt)
       if(!running){running=true;requestAnimationFrame(loop);}
     },{passive:true});
   })();
@@ -2810,8 +2813,7 @@ fcBootstrap();
       svg.classList.remove('hc-react'); void svg.offsetWidth; svg.classList.add('hc-react');
       clearTimeout(window._hcRT); window._hcRT=setTimeout(function(){svg.classList.remove('hc-react');},560);
     }
-    document.addEventListener('click',function(e){
-      if(!e.target.closest('#heroCharSVG'))return;
+    function hcPoke(){
       reactT=performance.now()/1000; hcWake();
       var hv=document.querySelector('.hero-visual');if(!hv)return;
       hcReact();
@@ -2829,6 +2831,20 @@ fcBootstrap();
         hv.appendChild(s);
         (function(el){setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},950);})(s);
       }
+    }
+    // Tap fiable sur mobile : 'touchend' (le 'click' rate parfois sur un SVG / si le doigt bouge), dédupliqué avec le click
+    var _hcTapT=0,_hcTSX=0,_hcTSY=0;
+    document.addEventListener('touchstart',function(e){var t=e.touches&&e.touches[0];if(t){_hcTSX=t.clientX;_hcTSY=t.clientY;}},{passive:true});
+    document.addEventListener('touchend',function(e){
+      var t=e.changedTouches&&e.changedTouches[0];if(!t)return;
+      if(!(e.target&&e.target.closest&&e.target.closest('#heroCharSVG')))return;
+      if(Math.abs(t.clientX-_hcTSX)>14||Math.abs(t.clientY-_hcTSY)>14)return;   // c'était un scroll, pas un tap
+      _hcTapT=performance.now(); hcPoke();
+    },{passive:true});
+    document.addEventListener('click',function(e){
+      if(!e.target.closest('#heroCharSVG'))return;
+      if(performance.now()-_hcTapT<700)return;                                  // déjà traité par le tap tactile
+      hcPoke();
     });
   })();
 })();
