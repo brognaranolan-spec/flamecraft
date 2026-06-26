@@ -452,7 +452,8 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .cart-item:hover .ci-art{transform:scale(1.05)}
 /* mascotte accueil */
 .hero-char-svg{display:block;width:300px;max-width:100%;height:auto;transition:transform .25s ease-out;will-change:transform}
-.hc-eye{transform-box:fill-box;transform-origin:center;animation:hcBlink 5.4s ease-in-out infinite}
+.hc-eye-wrap{transform-box:fill-box;transform-origin:center;animation:hcBlink 5.4s ease-in-out infinite}
+.hc-pupil{transition:transform .13s ease-out}
 @keyframes hcBlink{0%,90%,100%{transform:scaleY(1)}93%{transform:scaleY(.1)}96%{transform:scaleY(1)}}
 .hc-core{animation:hcCore 1.9s ease-in-out infinite}
 @keyframes hcCore{0%,100%{opacity:.45}50%{opacity:1}}
@@ -478,8 +479,17 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .hc-scan{animation:hcScan 3.6s linear infinite}
 @keyframes hcScan{0%{opacity:.4}50%{opacity:.75}100%{opacity:.4}}
 /* Réaction au clic / tap : yeux qui s'agrandissent + sourire ouvert + joues */
-.hc-react .hc-eye{animation:hcPop .5s ease-out}
+.hc-react .hc-eye-wrap{animation:hcPop .5s ease-out}
 @keyframes hcPop{0%{transform:scale(1)}35%{transform:scale(1.3)}100%{transform:scale(1)}}
+/* Mode dodo : yeux fermés + « z » qui flottent */
+.hc-zzz{opacity:0}
+.hc-sleep .hc-eye-wrap{animation:none;transform:scaleY(.1)}
+.hc-sleep .hc-pupil{opacity:0}
+.hc-sleep .hc-zzz{animation:hcZzz 2.6s ease-in-out infinite}
+@keyframes hcZzz{0%{opacity:0;transform:translate(0,2px) scale(.7)}28%{opacity:.92}100%{opacity:0;transform:translate(8px,-17px) scale(1.12)}}
+/* Clin d'œil */
+.hc-eye-wrap.hc-wink{animation:hcWinkA .32s ease-in-out}
+@keyframes hcWinkA{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.08)}}
 .hc-react .hc-mouth-n{opacity:0}
 .hc-react .hc-mouth-o{opacity:1}
 .hc-react .hc-cheek{transform:scale(1.28)}
@@ -493,7 +503,7 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .hc-bubble{position:absolute;left:50%;top:9%;transform:translate(-50%,-7px) scale(.92);background:rgba(13,9,32,.96);border:1px solid var(--cyan);color:var(--cyan2);font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.05em;padding:7px 13px;border-radius:12px;white-space:nowrap;box-shadow:0 0 20px rgba(0,216,200,.32);opacity:0;pointer-events:none;z-index:6;transition:opacity .22s,transform .22s cubic-bezier(.2,1.5,.4,1)}
 .hc-bubble.on{opacity:1;transform:translate(-50%,0) scale(1)}
 .hc-bubble::after{content:'';position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);width:0;height:0;border:6px solid transparent;border-top-color:var(--cyan);border-bottom:0}
-@media(prefers-reduced-motion:reduce){.hc-glint,.hc-scan,.hc-eye{animation:none}.hc-glint{opacity:0}}
+@media(prefers-reduced-motion:reduce){.hc-glint,.hc-scan,.hc-eye-wrap,.hc-sleep .hc-zzz{animation:none}.hc-glint,.hc-zzz{opacity:0}}
 /* accessibilité : mouvement réduit */
 @media (prefers-reduced-motion: reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.05s!important}
@@ -1431,10 +1441,9 @@ function mkHeroChar(){
       <g transform="rotate(15 110 99)"><rect class="hc-glint" x="44" y="28" width="22" height="142" fill="url(#hcGlint)"/></g>
     </g>
     <g id="hc-eyes">
-      <rect x="84" y="86" width="15" height="26" rx="7.5" fill="#00d8c8" class="hc-eye"/>
-      <rect x="121" y="86" width="15" height="26" rx="7.5" fill="#00d8c8" class="hc-eye"/>
-      <circle cx="88" cy="92" r="2.8" fill="#eafffb" class="hc-shine"/>
-      <circle cx="125" cy="92" r="2.8" fill="#eafffb" class="hc-shine"/>
+      <g class="hc-eye-wrap"><rect x="84" y="86" width="15" height="26" rx="7.5" fill="#00d8c8" class="hc-eye"/><g class="hc-pupil"><circle cx="91.5" cy="99" r="3.7" fill="#06121e"/><circle cx="90.2" cy="97.4" r="1.5" fill="#cffff6"/></g></g>
+      <g class="hc-eye-wrap"><rect x="121" y="86" width="15" height="26" rx="7.5" fill="#00d8c8" class="hc-eye"/><g class="hc-pupil"><circle cx="128.5" cy="99" r="3.7" fill="#06121e"/><circle cx="127.2" cy="97.4" r="1.5" fill="#cffff6"/></g></g>
+      <text class="hc-zzz" x="150" y="58" fill="#7fe9dd" font-family="'DM Mono',monospace" font-size="13" font-weight="600">z</text>
     </g>
     <ellipse cx="76" cy="120" rx="9" ry="5" fill="rgba(255,32,96,.5)" class="hc-cheek"/>
     <ellipse cx="144" cy="120" rx="9" ry="5" fill="rgba(255,32,96,.5)" class="hc-cheek"/>
@@ -1444,6 +1453,10 @@ function mkHeroChar(){
     <circle cx="110" cy="193" r="3.4" fill="#ff2060" class="hc-core"/>
   </svg>`;
 }
+// Mascotte : pupilles + réveil (partagés par souris/scroll/personnalité)
+function hcNow(){return (window.performance&&performance.now())||Date.now();}
+function hcPupils(x,y){var ps=document.querySelectorAll('.hc-pupil');for(var i=0;i<ps.length;i++)ps[i].style.transform='translate('+(+x).toFixed(1)+'px,'+(+y).toFixed(1)+'px)';}
+function hcWake(){window._hcAct=hcNow();var svg=document.querySelector('.hero-char-svg');if(svg&&svg.classList.contains('hc-sleep'))svg.classList.remove('hc-sleep');}
 function playHeroIntro(){
   var home=document.getElementById('page-home');if(!home)return;
   home.classList.remove('hero-anim');void home.offsetWidth;home.classList.add('hero-anim');
@@ -2727,8 +2740,7 @@ fcBootstrap();
         var dx=Math.max(-1,Math.min(1,(e.clientX-(r.left+r.width/2))/(r.width/2)));
         var dy=Math.max(-1,Math.min(1,(e.clientY-(r.top+r.height/2))/(r.height/2)));
         svg.style.transform='perspective(820px) rotateY('+(dx*11).toFixed(2)+'deg) rotateX('+(-dy*8).toFixed(2)+'deg)';
-        var eyes=document.getElementById('hc-eyes');
-        if(eyes)eyes.setAttribute('transform','translate('+(dx*5).toFixed(1)+' '+(dy*4).toFixed(1)+')');
+        hcWake(); hcPupils(dx*3.4, dy*4);
       },{passive:true});
     }
   }
@@ -2738,15 +2750,14 @@ fcBootstrap();
     function mob(){return document.documentElement.classList.contains('m');}
     function loop(){
       cur+=(vel-cur)*0.18; vel*=0.85;
-      var eyes=document.getElementById('hc-eyes');
-      if(eyes)eyes.setAttribute('transform','translate(0 '+(cur*6).toFixed(1)+')');
+      hcPupils(0, cur*4);
       if(Math.abs(cur)>0.02||Math.abs(vel)>0.02){requestAnimationFrame(loop);}
-      else{if(eyes)eyes.setAttribute('transform','translate(0 0)');running=false;}
+      else{hcPupils(0,0);running=false;}
     }
     window.addEventListener('scroll',function(){
       var y=window.scrollY||window.pageYOffset||0, d=y-lastY; lastY=y;
-      if(!mob())return;                                   // PC : on ne touche pas aux yeux (souris uniquement)
-      vel=Math.max(-1,Math.min(1,d/26));                  // scroll bas = yeux bas (+), scroll haut = yeux haut (−)
+      if(!mob())return;                                   // PC : pupilles pilotées par la souris uniquement
+      hcWake(); vel=Math.max(-1,Math.min(1,d/26));        // scroll bas = pupilles bas (+), haut = pupilles haut (−)
       if(!running){running=true;requestAnimationFrame(loop);}
     },{passive:true});
   })();
@@ -2758,7 +2769,7 @@ fcBootstrap();
     var wrap=document.getElementById('heroCharSVG');
     var speeds=[15,-21,29];                       // deg/s par anneau
     var cols=[[255,32,96],[0,216,200],[160,64,232]];
-    var hoverAmt=0, reactT=-9, REACT=0.78;
+    var hoverAmt=0, reactT=-9, REACT=0.78, dizzyT=-9, DIZZY=0.95, hcClicks=[];
     function lerp(a,b,t){return a+(b-a)*t;}
     if(reduce){ if(wrap)wrap.style.filter='drop-shadow(0 0 16px rgba(255,32,96,.4))'; }
     else {
@@ -2777,6 +2788,9 @@ fcBootstrap();
           var fy=Math.sin(t*1.5)*8, sc=1+hoverAmt*0.05, rot=0;             // flottement + survol
           var rt=now/1000-reactT;
           if(rt<REACT){var p=rt/REACT;sc*=1+Math.sin(p*Math.PI)*0.2;rot=Math.sin(p*Math.PI*2)*18;fy-=Math.sin(p*Math.PI)*16;}  // réaction clic
+          var dz=now/1000-dizzyT;
+          if(dz<DIZZY){var q=dz/DIZZY;rot+=Math.sin(q*Math.PI*7)*26*(1-q);sc*=1+Math.sin(q*Math.PI)*0.08;}                       // combo de clics → étourdi
+          var sl=wrap.querySelector('.hero-char-svg');if(sl&&sl.classList.contains('hc-sleep'))fy*=0.4;                           // dodo : flottement plus calme
           wrap.style.filter='drop-shadow(0 0 '+(16+hoverAmt*9).toFixed(1)+'px rgba('+R+','+G+','+B+','+(0.42+hoverAmt*0.22).toFixed(2)+'))';
           wrap.style.transform='translateY('+fy.toFixed(2)+'px) scale('+sc.toFixed(3)+') rotate('+rot.toFixed(2)+'deg)';
         }
@@ -2784,12 +2798,13 @@ fcBootstrap();
     }
     // interaction : clic/tap sur la mascotte -> réaction (yeux/sourire) + bulle + rebond + gerbe
     var HC_SAY=['Salut toi ✦','T\'as vu mes coques ?','Dark kawaii ⚡','Clique encore !','Bienvenue 🔥','On imprime ?','Héhé~','Choisis ta couleur','✦ fait main ✦','Coucou !'];
-    function hcSay(hv){
+    function hcSayText(hv,txt){
       var b=hv.querySelector('.hc-bubble'); if(!b){b=document.createElement('div');b.className='hc-bubble';hv.appendChild(b);}
-      b.textContent=HC_SAY[Math.floor(Math.random()*HC_SAY.length)];
+      b.textContent=txt;
       void b.offsetWidth; b.classList.add('on');
       clearTimeout(b._t); b._t=setTimeout(function(){b.classList.remove('on');},2600);
     }
+    function hcSay(hv){ hcSayText(hv, HC_SAY[Math.floor(Math.random()*HC_SAY.length)]); }
     function hcReact(){
       var svg=document.querySelector('.hero-char-svg'); if(!svg)return;
       svg.classList.remove('hc-react'); void svg.offsetWidth; svg.classList.add('hc-react');
@@ -2797,9 +2812,12 @@ fcBootstrap();
     }
     document.addEventListener('click',function(e){
       if(!e.target.closest('#heroCharSVG'))return;
-      reactT=performance.now()/1000;
+      reactT=performance.now()/1000; hcWake();
       var hv=document.querySelector('.hero-visual');if(!hv)return;
-      hcReact(); hcSay(hv);
+      hcReact();
+      var tn=performance.now(); hcClicks=hcClicks.filter(function(t){return tn-t<1300;}); hcClicks.push(tn);
+      if(hcClicks.length>=3){ dizzyT=performance.now()/1000; hcClicks=[]; hcSayText(hv,['Ouhla, du calme ! 😵','Héhé, ça chatouille !','Tu m\'étourdis ✦','Stooop 😆'][Math.floor(Math.random()*4)]); }
+      else hcSay(hv);
       var ic=['♥','✦','★','✺','♥','✦'], pal=['#ff2060','#00d8c8','#c080ff'];
       for(var i=0;i<9;i++){
         var s=document.createElement('span');s.className='hc-burst';s.textContent=ic[i%ic.length];
@@ -2813,6 +2831,20 @@ fcBootstrap();
       }
     });
   })();
+})();
+
+// Mascotte : personnalité au repos — dodo après inactivité + clin d'œil, réveil à la moindre interaction
+(function(){
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  window._hcAct=hcNow();
+  ['mousemove','scroll','pointerdown','touchstart','keydown'].forEach(function(ev){window.addEventListener(ev,hcWake,{passive:true});});
+  setInterval(function(){
+    var svg=document.querySelector('.hero-char-svg');if(!svg)return;
+    var idle=hcNow()-(window._hcAct||0), asleep=svg.classList.contains('hc-sleep');
+    if(idle>12000){ if(!asleep){svg.classList.add('hc-sleep');hcPupils(0,0);} return; }
+    if(asleep)svg.classList.remove('hc-sleep');
+    if(idle>3500&&Math.random()<0.14){ var w=svg.querySelectorAll('.hc-eye-wrap'), one=w[Math.floor(Math.random()*w.length)]; if(one){one.classList.add('hc-wink');setTimeout(function(){one.classList.remove('hc-wink');},340);} }
+  },1500);
 })();
 
 // ═══ MODÈLES 3D PRODUITS (formes réelles pour les visionneuses) ═══
