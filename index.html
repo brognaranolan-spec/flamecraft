@@ -3672,6 +3672,23 @@ function applyGameModels(){
     if(obj){_playerProc.forEach(function(c){c.visible=false;});playerGrp.add(obj);_playerCustom=obj;}
     else{_playerProc.forEach(function(c){c.visible=true;});}
   },{size:2.3});
+  // PNJ — modèle enfant du grp (suit déplacement + rotation ; colliders inchangés)
+  npcs.forEach(function(n,i){
+    applySlotModel('npc:'+i,GAMECFG['npc:'+i],function(obj){
+      if(!n._proc)n._proc=n.grp.children.slice();
+      if(n._custom){n.grp.remove(n._custom);n._custom=null;}
+      if(obj){n._proc.forEach(function(c){c.visible=false;});n.grp.add(obj);n._custom=obj;}
+      else{n._proc.forEach(function(c){c.visible=true;});}
+    },{size:2.2});
+  });
+  // OBJETS À COLLECTER — modèle flottant à la place du visuel par défaut
+  collectibles.forEach(function(c){
+    applySlotModel('item:'+c.type+':'+c.pid,GAMECFG['item:'+c.type+':'+c.pid],function(obj){
+      if(c._custom){scene.remove(c._custom);c._custom=null;}
+      if(obj){c.mesh.visible=false;obj.position.set(c.x,1.2,c.z);obj.visible=!c.done;scene.add(obj);c._custom=obj;}
+      else{c.mesh.visible=!c.done;}
+    },{size:1.7,yOffset:0});
+  });
 }
 
 /* ── BÂTIMENTS ── */
@@ -5628,8 +5645,14 @@ function loop(){
   collectibles.forEach(function(c){
     if(c.done)return;
     c.t+=dt;
-    c.mesh.position.y=1.05+Math.sin(c.t*2.4)*.22;
-    c.mesh.rotation.y+=dt*1.6;
+    if(c._custom){                                   // modèle perso : flotte + tourne à la place du visuel par défaut
+      c.mesh.visible=false;
+      c._custom.position.set(c.x,1.2+Math.sin(c.t*2.4)*.22,c.z);
+      c._custom.rotation.y+=dt*1.6;
+    } else {
+      c.mesh.position.y=1.05+Math.sin(c.t*2.4)*.22;
+      c.mesh.rotation.y+=dt*1.6;
+    }
     c.halo.scale.setScalar(1+Math.sin(c.t*2.4)*.12);
     c.light.intensity=1.2+Math.sin(c.t*3.2)*.5;
   });
@@ -5787,7 +5810,7 @@ function talkNPC(n){
   clearTimeout(box._t);box._t=setTimeout(function(){box.classList.remove('on');},5200);
 }
 function pickItem(c){
-  c.done=true;c.mesh.visible=false;c.halo.visible=false;c.light.intensity=0;
+  c.done=true;c.mesh.visible=false;c.halo.visible=false;c.light.intensity=0;if(c._custom)c._custom.visible=false;
   const tc={p:0xff2060,c:0x00d8c8,pu:0xc080ff}[c.prod.theme]||0xff2060;
   spawnDust(c.x,1.2,c.z,8,tc);
   AUD.chord([523,659,784,1046],.26,'triangle',.13);
@@ -6036,7 +6059,8 @@ return {
   resetZone:function(){
     try{localStorage.removeItem(MINIS_KEY);localStorage.removeItem(WM_KEY);localStorage.removeItem(FOUND_KEY);}catch(e){}
     collectibles.forEach(function(c){
-      c.done=false;c.mesh.visible=true;c.halo.visible=true;c.light.intensity=1.4;
+      c.done=false;c.halo.visible=true;c.light.intensity=1.4;
+      if(c._custom){c._custom.visible=true;c.mesh.visible=false;}else{c.mesh.visible=true;}
     });
     found=0;document.getElementById('gitems-n').textContent='0/10';
     miniSpots.forEach(function(m){m.done=false;});
