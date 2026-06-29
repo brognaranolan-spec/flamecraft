@@ -3474,7 +3474,7 @@ const GS={brightness:1.5,crtEnabled:true,crtIntensity:0.5,settingsOpen:false,aud
 const FOUND_KEY='fc_game_found';
 // ── Modèles 3D personnalisables (publiés via dashboard → config.settings.game) ──
 // GAMECFG[slot] = { url, scale?, yOffset?, rot? }. Slots : 'player' (+ à venir : npc/items/props).
-let GAMECFG={}, _appliedModels={}, _playerProc=null, _playerCustom=null;
+let GAMECFG={}, _appliedModels={}, _playerProc=null, _playerCustom=null, _propObjs={};
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -3689,6 +3689,51 @@ function applyGameModels(){
       else{c.mesh.visible=!c.done;}
     },{size:1.7,yOffset:0});
   });
+  applyProps();
+}
+
+/* ── PROPS / BÂTIMENTS PERSO (ajoutés via dashboard, avec empreinte de collision) ── */
+// Le visuel (modèle perso) et la collision (footprint XZ) sont indépendants : on pose
+// l'empreinte déclarée dans le slot, jamais déduite de la géométrie importée.
+function setPropCollider(rec,pc){
+  if(rec.col){var i=colliders.indexOf(rec.col);if(i>=0)colliders.splice(i,1);rec.col=null;}
+  var f=pc.foot;if(!f||!f.shape||f.shape==='none')return;
+  var col=(f.shape==='circle')?{x:pc.x||0,z:pc.z||0,r:Math.max(.3,f.r||2)}
+                              :{x:pc.x||0,z:pc.z||0,hw:Math.max(.3,f.hw||2),hd:Math.max(.3,f.hd||2)};
+  colliders.push(col);rec.col=col;
+}
+function applyPropTransform(rec,pc){
+  var m=rec.mesh;if(!m)return;
+  m.scale.setScalar((rec.base||1)*(pc.scale||1));
+  m.rotation.y=pc.rot||0;
+  m.position.set(pc.x||0, -(rec.bottom||0)*(pc.scale||1)+(pc.lift||0), pc.z||0);  // posé au sol + lift
+}
+function removeProp(id){
+  var rec=_propObjs[id];if(!rec)return;
+  if(rec.mesh)scene.remove(rec.mesh);
+  if(rec.col){var i=colliders.indexOf(rec.col);if(i>=0)colliders.splice(i,1);}
+  delete _propObjs[id];
+}
+function applyProps(){
+  if(!inited)return;
+  var list=Array.isArray(GAMECFG.props)?GAMECFG.props:[], seen={};
+  list.forEach(function(pc){
+    if(!pc||!pc.id)return;seen[pc.id]=true;
+    var rec=_propObjs[pc.id]||(_propObjs[pc.id]={url:null,mesh:null,col:null,base:1,bottom:0});
+    setPropCollider(rec,pc);                              // collision : maj à chaque fois (peu coûteux)
+    if(pc.url&&pc.url!==rec.url){                         // visuel : recharge seulement si l'URL change
+      rec.url=pc.url;var capUrl=pc.url;
+      loadGameModel(pc.url,{size:6,yOffset:0,rot:0}).then(function(obj){
+        if(rec.url!==capUrl)return;                       // changé entre-temps
+        if(rec.mesh)scene.remove(rec.mesh);
+        rec.base=obj.scale.x||1;
+        rec.bottom=new THREE.Box3().setFromObject(obj).min.y;   // bas du modèle à l'échelle de base
+        rec.mesh=obj;scene.add(obj);applyPropTransform(rec,pc);
+      }).catch(function(e){console.warn('Prop '+pc.id+' :',(e&&e.message)||e);});
+    } else if(!pc.url&&rec.mesh){scene.remove(rec.mesh);rec.mesh=null;rec.url=null;}
+    else if(rec.mesh){applyPropTransform(rec,pc);}        // simple maj de position/échelle (sans recharger)
+  });
+  Object.keys(_propObjs).forEach(function(id){if(!seen[id])removeProp(id);});
 }
 
 /* ── BÂTIMENTS ── */
@@ -6060,6 +6105,7 @@ return {
     var fx=null,fz=null;
     if(key&&key.indexOf('npc:')===0){var n=npcs[parseInt(key.slice(4),10)];if(n&&n.grp){fx=n.grp.position.x;fz=n.grp.position.z;}}
     else if(key&&key.indexOf('item:')===0){var pp=key.slice(5).split(':');var c=collectibles.find(function(x){return x.type===pp[0]&&x.pid===parseInt(pp[1],10);});if(c){fx=c.x;fz=c.z;}}
+    else if(key&&key.indexOf('prop:')===0){var pid=key.slice(5),pr=(GAMECFG.props||[]).find(function(x){return x.id===pid;});if(pr){fx=pr.x||0;fz=pr.z||0;}else{fx=0;fz=24;}}
     else {fx=0;fz=24;}                 // 'player' / défaut → près du spawn
     if(fx!=null){player.x=fx;player.z=fz+6;player.y=0;player.rot=Math.PI;playerGrp.position.set(player.x,0,player.z);}
   },

@@ -854,10 +854,20 @@ function renderW3Controls(){
           '<span>'+esc(w3Sub(it))+'</span></button>';
       }).join('')+'</div></div>';
   }).join('');
-  box.innerHTML=listHTML+w3EditorHTML()+
-    '<input type="file" id="w3-file" accept=".glb,.gltf,.stl,.obj" style="display:none" onchange="w3File(this)">';
+  var props=w3Props();
+  var propHTML='<div class="card"><div class="card-h">Décors &amp; bâtiments (perso) <button class="btn btn-cyan btn-sm" onclick="w3AddProp()">+ Ajouter</button></div><div class="lp-models">'+
+    (props.length?props.map(function(p){
+      return '<button class="lp-model'+(w3sel==='prop:'+p.id?' on':'')+'" onclick="w3Pick(\'prop:'+p.id+'\')">'+
+        '<b>'+esc(p.name||'Décor')+(p.url?' <span style="color:var(--cyan2)">✓</span>':'')+'</b>'+
+        '<span>x '+Math.round(p.x||0)+' · z '+Math.round(p.z||0)+'</span></button>';
+    }).join(''):'<div class="muted mono" style="font-size:.6rem">Aucun décor perso. « + Ajouter » pour poser ton propre bâtiment/objet sur la map (avec collision).</div>')+
+    '</div></div>';
+  box.innerHTML=listHTML+propHTML+w3EditorHTML()+
+    '<input type="file" id="w3-file" accept=".glb,.gltf,.stl,.obj" style="display:none" onchange="w3File(this)">'+
+    '<input type="file" id="w3-prop-file" accept=".glb,.gltf,.stl,.obj" style="display:none" onchange="w3PropFile(this)">';
 }
 function w3EditorHTML(){
+  if(w3sel.indexOf('prop:')===0)return w3PropEditorHTML();
   var key=w3sel, c=state.game[key]||{};
   var status=c.url
     ?('<span style="color:var(--cyan2)">modèle perso ✓</span> <span class="muted mono" style="font-size:.54rem">'+esc(c.url.split('?')[0].split('/').pop())+'</span>')
@@ -895,20 +905,75 @@ function w3Remove(){
   api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});
   delete state.game[w3sel];markDirty();renderW3Controls();gpPostCfg();toast('Modèle retiré');
 }
-function uploadGameModel(slotKey,file){
+// ── Décors / bâtiments perso (props placables avec empreinte de collision) ──
+function w3Props(){if(!Array.isArray(state.game.props))state.game.props=[];return state.game.props;}
+function w3CurProp(){var id=w3sel.slice(5);return w3Props().find(function(p){return p.id===id;});}
+function w3AddProp(){
+  var p={id:'p'+Date.now().toString(36),name:'Décor',x:0,z:30,rot:0,scale:1,lift:0,foot:{shape:'box',hw:2,hd:2}};
+  w3Props().push(p);w3sel='prop:'+p.id;markDirty();renderW3Controls();gpPostCfg();gpFocus(w3sel);
+  toast('Décor ajouté — importe un modèle 3D');
+}
+function w3PropSet(field,val){var p=w3CurProp();if(!p)return;p[field]=val;markDirty();renderW3Controls();gpPostCfg();if(field==='x'||field==='z')gpFocus(w3sel);}
+function w3FootSet(field,val){var p=w3CurProp();if(!p)return;if(!p.foot)p.foot={shape:'box'};p.foot[field]=val;markDirty();renderW3Controls();gpPostCfg();}
+function w3DelProp(){
+  var p=w3CurProp();if(!p)return;
+  if(p.url){var k=p.url.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});}
+  state.game.props=w3Props().filter(function(x){return x.id!==p.id;});
+  w3sel='player';markDirty();renderW3Controls();gpPostCfg();toast('Décor supprimé');
+}
+function w3PropFile(input){
+  var f=input.files[0];if(!f)return;input.value='';var p=w3CurProp();if(!p)return;
+  toast('Import du modèle…');
+  uploadPropModel(p,f).then(function(){renderW3Controls();gpPostCfg();gpFocus(w3sel);toast('Modèle importé — publie pour l\'appliquer','ok');})
+    .catch(function(e){if(e)toast('Erreur : '+(e.message||e),'bad');});
+}
+function w3PropEditorHTML(){
+  var p=w3CurProp();if(!p)return '<div class="card"><div class="muted">Décor introuvable.</div></div>';
+  var f=p.foot||{shape:'box'};
+  var status=p.url?('<span style="color:var(--cyan2)">modèle perso ✓</span> <span class="muted mono" style="font-size:.54rem">'+esc(p.url.split('?')[0].split('/').pop())+'</span>'):'<span class="muted">aucun modèle importé</span>';
+  function rng(lbl,field,min,max,step,val){return '<div class="frow" style="margin-top:.6rem"><label class="f-lbl">'+lbl+'</label><input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'" oninput="w3PropSet(\''+field+'\',parseFloat(this.value))"></div>';}
+  var footCtrl='';
+  if((f.shape||'box')==='box')footCtrl='<div class="frow2" style="margin-top:.5rem"><div class="frow"><label class="f-lbl">½ Largeur — '+(+(f.hw||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.hw||2)+'" oninput="w3FootSet(\'hw\',parseFloat(this.value))"></div><div class="frow"><label class="f-lbl">½ Profondeur — '+(+(f.hd||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.hd||2)+'" oninput="w3FootSet(\'hd\',parseFloat(this.value))"></div></div>';
+  else if(f.shape==='circle')footCtrl='<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Rayon — '+(+(f.r||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.r||2)+'" oninput="w3FootSet(\'r\',parseFloat(this.value))"></div>';
+  return '<div class="card" style="border-color:rgba(0,216,200,.32)">'+
+    '<div class="card-h"><input class="f-inp" style="max-width:170px;font-size:.8rem" value="'+esc(p.name||'')+'" oninput="w3PropSet(\'name\',this.value)" placeholder="Nom du décor"></div>'+
+    '<div style="font-size:.74rem;margin:.2rem 0 .7rem">'+status+'</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.6rem">'+
+      '<button class="btn btn-cyan btn-sm" onclick="document.getElementById(\'w3-prop-file\').click()">Importer GLB / STL / OBJ</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="gpFocus(\''+w3sel+'\')">Recentrer ↗</button>'+
+      '<button class="btn btn-ghost btn-sm" style="color:var(--pink2)" onclick="w3DelProp()">Supprimer</button>'+
+    '</div>'+
+    '<div class="frow2"><div class="frow"><label class="f-lbl">Position X — '+Math.round(p.x||0)+'</label><input type="range" min="-260" max="260" step="2" value="'+(p.x||0)+'" oninput="w3PropSet(\'x\',parseFloat(this.value))"></div>'+
+      '<div class="frow"><label class="f-lbl">Position Z — '+Math.round(p.z||0)+'</label><input type="range" min="-260" max="260" step="2" value="'+(p.z||0)+'" oninput="w3PropSet(\'z\',parseFloat(this.value))"></div></div>'+
+    rng('Rotation — '+Math.round((p.rot||0)*180/Math.PI)+'°','rot',0,6.28,0.05,(p.rot||0))+
+    rng('Taille — '+(+(p.scale||1)).toFixed(2)+'×','scale',0.3,6,0.05,(p.scale||1))+
+    rng('Hauteur (lift) — '+(+(p.lift||0)).toFixed(1),'lift',-2,12,0.1,(p.lift||0))+
+    '<div class="frow" style="margin-top:.8rem"><label class="f-lbl">Collision (empreinte au sol)</label>'+
+      '<select class="f-inp" onchange="w3FootSet(\'shape\',this.value)">'+
+        ['none|Aucune (traversable)','box|Boîte','circle|Cercle'].map(function(o){var v=o.split('|');return '<option value="'+v[0]+'"'+((f.shape||'box')===v[0]?' selected':'')+'>'+v[1]+'</option>';}).join('')+
+      '</select></div>'+footCtrl+
+    '<div class="hint" style="margin-top:.7rem">Place ton bâtiment/objet (X/Z), ajuste taille &amp; hauteur, puis définis l\'<b>empreinte de collision</b> (boîte/cercle) pour qu\'on ne le traverse pas. « Aucune » = décor traversable. Rendu en direct à droite.</div>'+
+  '</div>';
+}
+function _uploadModel(baseKey,file,oldUrl){
   var ext=(file.name.split('.').pop()||'').toLowerCase();
   if(['glb','gltf','stl','obj'].indexOf(ext)<0){toast('Format : GLB, glTF, STL ou OBJ','bad');return Promise.reject();}
   if(file.size>9*1024*1024){toast('Fichier trop lourd (max 9 Mo)','bad');return Promise.reject();}
   var ct=ext==='glb'?'model/gltf-binary':ext==='gltf'?'model/gltf+json':ext==='obj'?'text/plain':'application/octet-stream';
-  var old=state.game[slotKey]&&state.game[slotKey].url;
+  var fullKey=baseKey+'.'+ext;
   return file.arrayBuffer().then(function(buf){
-    var mkey='game:'+slotKey+'.'+ext;
-    return api('/admin/model/'+encodeURIComponent(mkey),{method:'POST',headers:{'Content-Type':ct},body:buf}).then(function(){
-      w3Cfg(slotKey).url=API_BASE.replace(/\/$/,'')+'/model/'+mkey+'?v='+Date.now();
-      if(old){var oldK=old.split('?')[0].split('/').pop();if(oldK!==mkey)api('/admin/model/'+encodeURIComponent(oldK),{method:'DELETE'}).catch(function(){});}
+    return api('/admin/model/'+encodeURIComponent(fullKey),{method:'POST',headers:{'Content-Type':ct},body:buf}).then(function(){
+      if(oldUrl){var oldK=oldUrl.split('?')[0].split('/').pop();if(oldK!==fullKey)api('/admin/model/'+encodeURIComponent(oldK),{method:'DELETE'}).catch(function(){});}
       markDirty();
+      return API_BASE.replace(/\/$/,'')+'/model/'+fullKey+'?v='+Date.now();
     });
   });
+}
+function uploadGameModel(slotKey,file){
+  return _uploadModel('game:'+slotKey,file,state.game[slotKey]&&state.game[slotKey].url).then(function(url){w3Cfg(slotKey).url=url;});
+}
+function uploadPropModel(prop,file){
+  return _uploadModel('game:prop:'+prop.id,file,prop.url).then(function(url){prop.url=url;});
 }
 // ── Aperçu live : iframe du jeu (#gamepreview) piloté par postMessage ──
 function gpFrame(){return document.getElementById('gp-frame');}
