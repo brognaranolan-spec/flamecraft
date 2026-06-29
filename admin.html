@@ -197,6 +197,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <button class="nav-it" data-sec="studio"><span class="nav-ico">◉</span><span>Studio 3D</span></button>
       <button class="nav-it" data-sec="content"><span class="nav-ico">✎</span><span>Contenu</span></button>
       <button class="nav-it" data-sec="disposition"><span class="nav-ico">▥</span><span>Disposition</span></button>
+      <button class="nav-it" data-sec="world3d"><span class="nav-ico">⬡</span><span>Monde 3D</span></button>
       <button class="nav-it" data-sec="orders"><span class="nav-ico">▦</span><span>Commandes</span></button>
       <button class="nav-it" data-sec="analytics"><span class="nav-ico">◔</span><span>Analytics</span></button>
       <button class="nav-it" data-sec="promos"><span class="nav-ico">%</span><span>Codes promo</span></button>
@@ -316,6 +317,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <section class="section" id="sec-disposition">
         <div class="hint" style="margin-bottom:1.1rem">Personnalise l'agencement du site (appliqué à tous les visiteurs après « Publier »). « Auto » garde l'agencement intelligent qui s'adapte au nombre d'articles.</div>
         <div id="layoutPanel"></div>
+      </section>
+
+      <!-- MONDE 3D -->
+      <section class="section" id="sec-world3d">
+        <div class="hint" style="margin-bottom:1.1rem">Remplace les modèles 3D du jeu (joueur, PNJ, objets à collecter) par les tiens — <b>GLB/glTF</b> (couleurs + textures + animations), <b>STL</b> ou <b>OBJ</b>. Les collisions du monde sont conservées : seul le visuel change. Choisis un slot à gauche, importe ton modèle, ajuste, et regarde le résultat en direct à droite. « Publier » applique aux visiteurs.</div>
+        <div id="world3dPanel"></div>
       </section>
 
       <!-- ORDERS -->
@@ -439,7 +446,7 @@ var HOME_MODELS={
 
 // ═══════════ ÉTAT ═══════════
 let TOKEN = sessionStorage.getItem('fc_admin_tok') || '';
-let state = { coques:[], figs:[], content:{}, settings:{}, promos:[], layout:layoutDefaults(), dirty:false };
+let state = { coques:[], figs:[], content:{}, settings:{}, promos:[], layout:layoutDefaults(), game:{}, dirty:false };
 let stats = null, orders = null;
 
 function key(type,id){return type+':'+id;}
@@ -498,6 +505,7 @@ function loadConfig(){
   state.content=clone(DEFAULT_CONTENT);
   state.promos=[];
   state.layout=layoutDefaults();
+  state.game={};
   return fetch(API_BASE.replace(/\/$/,'')+'/config?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(cfg){
     if(cfg&&cfg.products){
       Object.keys(cfg.products).forEach(function(k){
@@ -510,6 +518,7 @@ function loadConfig(){
     if(cfg&&cfg.content)Object.assign(state.content,cfg.content);
     if(cfg&&cfg.settings)state.settings=cfg.settings;
     state.layout=migrateLayout(cfg&&cfg.settings&&cfg.settings.layout);
+    state.game=clone((cfg&&cfg.settings&&cfg.settings.game)||{});
   }).catch(function(){}).then(function(){
     return api('/admin/promos').then(function(d){state.promos=Array.isArray(d.promos)?d.promos:[];}).catch(function(){state.promos=[];});
   }).then(function(){
@@ -522,7 +531,7 @@ function buildConfig(){
   var products={};
   state.coques.forEach(function(p){products[key('coque',p.id)]=p;});
   state.figs.forEach(function(p){products[key('fig',p.id)]=p;});
-  return {products:products,content:state.content,settings:Object.assign({},state.settings,{layout:state.layout}),promos:state.promos};
+  return {products:products,content:state.content,settings:Object.assign({},state.settings,{layout:state.layout,game:state.game}),promos:state.promos};
 }
 function publish(){
   api('/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildConfig())})
@@ -550,6 +559,7 @@ document.getElementById('nav').addEventListener('click',function(e){
   if(sec==='analytics')renderAnalytics();
   if(sec==='studio')studioPick();
   if(sec==='disposition'){lpScale();lpPostCfg();}
+  if(sec==='world3d')renderWorld3d();
 });
 
 // ═══════════ PRODUITS ═══════════
@@ -784,6 +794,134 @@ function lpScale(){
 function lpReady(){lpScale();lpPostCfg();lpGoto('coques',document.querySelector('.lp-tab'));}
 window.addEventListener('message',function(e){if(e.origin===location.origin&&e.data&&e.data.type==='fc-ready')lpPostCfg();});
 window.addEventListener('resize',lpScale);
+
+// ═══════════ MONDE 3D (modèles personnalisables du jeu) ═══════════
+// Slots = entités du jeu dont on peut remplacer le visuel (collisions préservées).
+var GAME_SLOTS=[
+  {group:'Personnage',items:[{key:'player',label:'Joueur',sub:'Le perso que tu incarnes'}]},
+  {group:'PNJ',items:[
+    {key:'npc:0',label:'LE VEILLEUR',sub:'Aéroport'},
+    {key:'npc:1',label:'MIRA',sub:'Hôpital'},
+    {key:'npc:2',label:'K-0',sub:'Zone militaire'},
+    {key:'npc:3',label:'LE MARCHAND',sub:'Centre-ville'},
+    {key:'npc:4',label:"L'OMBRE",sub:'PNJ errant'}
+  ]},
+  {group:'Objets à collecter',items:[
+    {key:'item:coque:0'},{key:'item:coque:1'},{key:'item:coque:2'},
+    {key:'item:coque:3'},{key:'item:coque:4'},{key:'item:coque:5'},
+    {key:'item:fig:0'},{key:'item:fig:1'},{key:'item:fig:2'},{key:'item:fig:3'}
+  ]}
+];
+var w3sel='player', gpReadyFlag=false;
+function w3Label(it){
+  if(it.label)return it.label;
+  var p=it.key.split(':'); // item, type, id
+  var arr=p[1]==='coque'?state.coques:state.figs;
+  var prod=arr.find(function(x){return x.id===parseInt(p[2],10);});
+  return (prod&&prod.name)||(p[1]+' #'+p[2]);
+}
+function w3Sub(it){return it.sub||(it.key.indexOf('item:coque')===0?'Coque':'Figurine');}
+function w3Cfg(key){if(!state.game[key])state.game[key]={};return state.game[key];}
+function w3SelLabel(){for(var i=0;i<GAME_SLOTS.length;i++){for(var j=0;j<GAME_SLOTS[i].items.length;j++){if(GAME_SLOTS[i].items[j].key===w3sel)return w3Label(GAME_SLOTS[i].items[j]);}}return w3sel;}
+function renderWorld3d(){
+  var wrap=document.getElementById('world3dPanel');if(!wrap)return;
+  if(!wrap.dataset.built){
+    wrap.innerHTML=
+      '<div class="lp-layout">'+
+        '<div class="lp-controls" id="w3Controls"></div>'+
+        '<div class="lp-preview"><div class="card" style="margin:0">'+
+          '<div class="card-h" style="margin-bottom:.7rem;flex-wrap:wrap;gap:8px">Aperçu en direct'+
+            '<span class="muted mono" style="font-size:.55rem;font-weight:400">glisse pour tourner la caméra · le slot choisi est mis en avant</span></div>'+
+          '<div id="gp-wrap" style="position:relative;width:100%;overflow:hidden;border:1px solid var(--b2);border-radius:8px;background:#06040f">'+
+            '<iframe id="gp-frame" src="index.html#gamepreview" onload="gpReady()" style="width:1280px;height:760px;border:0;display:block;transform-origin:top left"></iframe>'+
+          '</div>'+
+          '<div class="muted mono" style="font-size:.56rem;margin-top:6px">Aperçu non publié. « Publier » applique les modèles aux visiteurs.</div>'+
+        '</div></div>'+
+      '</div>';
+    wrap.dataset.built='1';
+  }
+  renderW3Controls();
+  setTimeout(function(){gpScale();if(gpReadyFlag){gpPostCfg();gpFocus(w3sel);}},80);
+}
+function renderW3Controls(){
+  var box=document.getElementById('w3Controls');if(!box)return;
+  var listHTML=GAME_SLOTS.map(function(g){
+    return '<div class="card"><div class="card-h">'+g.group+'</div><div class="lp-models">'+
+      g.items.map(function(it){
+        var has=!!(state.game[it.key]&&state.game[it.key].url);
+        return '<button class="lp-model'+(w3sel===it.key?' on':'')+'" onclick="w3Pick(\''+it.key+'\')">'+
+          '<b>'+esc(w3Label(it))+(has?' <span style="color:var(--cyan2)">✓</span>':'')+'</b>'+
+          '<span>'+esc(w3Sub(it))+'</span></button>';
+      }).join('')+'</div></div>';
+  }).join('');
+  box.innerHTML=listHTML+w3EditorHTML()+
+    '<input type="file" id="w3-file" accept=".glb,.gltf,.stl,.obj" style="display:none" onchange="w3File(this)">';
+}
+function w3EditorHTML(){
+  var key=w3sel, c=state.game[key]||{};
+  var status=c.url
+    ?('<span style="color:var(--cyan2)">modèle perso ✓</span> <span class="muted mono" style="font-size:.54rem">'+esc(c.url.split('?')[0].split('/').pop())+'</span>')
+    :'<span class="muted">modèle d\'origine (procédural)</span>';
+  var sc=(c.scale!=null?c.scale:1), hasYo=(c.yOffset!=null), yo=(hasYo?c.yOffset:0);
+  var rotDeg=(c.rot!=null?Math.round(c.rot*180/Math.PI):0);
+  return '<div class="card" style="border-color:rgba(0,216,200,.32)">'+
+    '<div class="card-h">'+esc(w3SelLabel())+'</div>'+
+    '<div style="font-size:.74rem;margin-bottom:.7rem">'+status+'</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.9rem">'+
+      '<button class="btn btn-cyan btn-sm" onclick="document.getElementById(\'w3-file\').click()">Importer GLB / STL / OBJ</button>'+
+      (c.url?'<button class="btn btn-ghost btn-sm" style="color:var(--pink2)" onclick="w3Remove()">Retirer</button>':'')+
+      '<button class="btn btn-ghost btn-sm" onclick="gpFocus(\''+key+'\')">Recentrer ↗</button>'+
+    '</div>'+
+    '<div class="frow"><label class="f-lbl">Taille — '+(+sc).toFixed(2)+'×</label>'+
+      '<input type="range" min="0.3" max="3" step="0.05" value="'+sc+'" oninput="w3Set(\'scale\',parseFloat(this.value))"></div>'+
+    '<div class="frow" style="margin-top:.6rem"><label class="f-lbl">Hauteur — '+(hasYo?(+yo).toFixed(2):'auto (posé au sol)')+'</label>'+
+      '<input type="range" min="0" max="3" step="0.05" value="'+yo+'" oninput="w3Set(\'yOffset\',parseFloat(this.value))"></div>'+
+    '<div class="frow" style="margin-top:.6rem"><label class="f-lbl">Rotation — '+rotDeg+'°</label>'+
+      '<input type="range" min="0" max="360" step="5" value="'+rotDeg+'" oninput="w3Set(\'rot\',parseFloat(this.value)*Math.PI/180)"></div>'+
+    '<div class="hint" style="margin-top:.8rem"><b>GLB</b> = couleurs + textures (export Blender). <b>STL/OBJ</b> = une seule teinte. Max 9 Mo. Le modèle est recentré et mis à l\'échelle auto ; affine avec les curseurs. Collisions du jeu inchangées.</div>'+
+  '</div>';
+}
+function w3Pick(key){w3sel=key;renderW3Controls();gpFocus(key);}
+function w3Set(field,val){w3Cfg(w3sel)[field]=val;markDirty();renderW3Controls();gpPostCfg();}
+function w3File(input){
+  var f=input.files[0];if(!f)return;input.value='';
+  toast('Import du modèle…');
+  uploadGameModel(w3sel,f).then(function(){renderW3Controls();gpPostCfg();toast('Modèle importé — publie pour l\'appliquer aux visiteurs','ok');})
+    .catch(function(e){if(e)toast('Erreur : '+(e.message||e),'bad');});
+}
+function w3Remove(){
+  var c=state.game[w3sel];if(!c||!c.url)return;
+  var k=c.url.split('?')[0].split('/').pop();
+  api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});
+  delete state.game[w3sel];markDirty();renderW3Controls();gpPostCfg();toast('Modèle retiré');
+}
+function uploadGameModel(slotKey,file){
+  var ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(['glb','gltf','stl','obj'].indexOf(ext)<0){toast('Format : GLB, glTF, STL ou OBJ','bad');return Promise.reject();}
+  if(file.size>9*1024*1024){toast('Fichier trop lourd (max 9 Mo)','bad');return Promise.reject();}
+  var ct=ext==='glb'?'model/gltf-binary':ext==='gltf'?'model/gltf+json':ext==='obj'?'text/plain':'application/octet-stream';
+  var old=state.game[slotKey]&&state.game[slotKey].url;
+  return file.arrayBuffer().then(function(buf){
+    var mkey='game:'+slotKey+'.'+ext;
+    return api('/admin/model/'+encodeURIComponent(mkey),{method:'POST',headers:{'Content-Type':ct},body:buf}).then(function(){
+      w3Cfg(slotKey).url=API_BASE.replace(/\/$/,'')+'/model/'+mkey+'?v='+Date.now();
+      if(old){var oldK=old.split('?')[0].split('/').pop();if(oldK!==mkey)api('/admin/model/'+encodeURIComponent(oldK),{method:'DELETE'}).catch(function(){});}
+      markDirty();
+    });
+  });
+}
+// ── Aperçu live : iframe du jeu (#gamepreview) piloté par postMessage ──
+function gpFrame(){return document.getElementById('gp-frame');}
+function gpPostCfg(){var f=gpFrame();if(f&&f.contentWindow){try{f.contentWindow.postMessage({type:'fc-game-cfg',cfg:buildConfig()},'*');}catch(_){}}}
+function gpFocus(key){var f=gpFrame();if(f&&f.contentWindow){try{f.contentWindow.postMessage({type:'fc-game-focus',key:key},'*');}catch(_){}}}
+function gpReady(){gpScale();}
+function gpScale(){
+  var w=document.getElementById('gp-wrap'),f=gpFrame();if(!w||!f||!w.clientWidth)return;
+  var fw=1280,fh=760,s=Math.min(1,w.clientWidth/fw);
+  f.style.transform='scale('+s+')';w.style.height=Math.round(fh*s)+'px';
+}
+window.addEventListener('message',function(e){if(e.origin===location.origin&&e.data&&e.data.type==='fc-game-ready'){gpReadyFlag=true;gpPostCfg();gpFocus(w3sel);}});
+window.addEventListener('resize',gpScale);
 
 // ═══════════ CODES PROMO ═══════════
 function renderPromos(){
