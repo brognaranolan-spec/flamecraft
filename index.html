@@ -54,6 +54,7 @@
 <meta name="twitter:image" content="https://brognaranolan-spec.github.io/flamecraft/og-image.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" defer></script>
 <script src="https://js.stripe.com/v3/"></script>
 <!-- Google Identity Services : injecté à la demande (ouverture de la connexion) — voir fcInitGoogle — pour ne pas charger de tiers avant action -->
 
@@ -2150,6 +2151,47 @@ function loadCustomModel(url,hex,size){
   });
 }
 
+// ── Chargeur de modèles pour le JEU ──────────────────────────────────────────
+// Gère .glb/.gltf (couleurs + textures + animations) ET .stl/.obj (monochrome).
+// Renvoie Promise<THREE.Group> : modèle recentré, mis à l'échelle (size = plus grande
+// dimension), posé sur le sol (bas à y=0) + décalage/rotation optionnels.
+// IMPORTANT : les collisions ne sont JAMAIS déduites ici — elles restent gérées par les
+// empreintes (footprint) du registre de slots. Ce chargeur ne touche QUE le visuel.
+function loadGameModel(url,opts){
+  opts=opts||{};
+  var size=opts.size||2.4, hex=opts.hex||0xffffff;
+  var clean=url.split('?')[0].split('#')[0];
+  var ext=(clean.split('.').pop()||'').toLowerCase();
+  function frame(obj){
+    var bbox=new THREE.Box3().setFromObject(obj), ctr=new THREE.Vector3(), sz=new THREE.Vector3();
+    bbox.getCenter(ctr);bbox.getSize(sz);
+    var maxD=Math.max(sz.x,sz.y,sz.z)||1, sc=size/maxD;
+    obj.position.sub(ctr);                         // recentre la géométrie à l'origine
+    var wrap=new THREE.Group();wrap.add(obj);wrap.scale.setScalar(sc);
+    // par défaut : pose le bas du modèle au sol (y=0) ; sinon offset explicite
+    wrap.position.y=(opts.yOffset!=null)?opts.yOffset:(sz.y*0.5*sc);
+    if(opts.rot)wrap.rotation.y=opts.rot;
+    wrap.traverse(function(o){if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+    wrap.userData.gltf=null;
+    return wrap;
+  }
+  var isGLB=ext==='glb'||ext==='gltf'||/^data:.*(gltf|glb|model\/gltf)/i.test(url);
+  if(isGLB){
+    return new Promise(function(res,rej){
+      if(!THREE.GLTFLoader){rej(new Error('GLTFLoader non chargé'));return;}
+      new THREE.GLTFLoader().load(url,function(gltf){
+        var root=gltf.scene||(gltf.scenes&&gltf.scenes[0]);
+        if(!root){rej(new Error('glTF sans scène'));return;}
+        var wrap=frame(root);
+        wrap.userData.gltf=gltf;                   // expose les animations éventuelles
+        res(wrap);
+      },undefined,function(e){rej(e&&e.message?e:new Error('glTF illisible'));});
+    });
+  }
+  // STL / OBJ (monochrome — réutilise le pipeline produits)
+  return loadCustomModel(url,hex,size).then(function(mesh){return frame(mesh);});
+}
+
 function v3dLoadSTL(url,name){
   fetch(url).then(r=>r.arrayBuffer()).then(buf=>{
     try{const geo=parseSTL(buf);v3dPlaceMesh(geo,name);}catch(e){showToast('Erreur lecture STL','pk');}
@@ -2783,6 +2825,8 @@ function fcApplyConfig(cfg){
   renderAll();
   if(isActive('figurines'))renderFigsPage();
   fcInjectJsonLd();
+  // Pousse la config au moteur de jeu (modèles 3D personnalisés) si présent
+  try{window.__FC_CFG__=cfg;if(typeof GAME!=='undefined'&&GAME.applyConfig)GAME.applyConfig(cfg);}catch(e){}
 }
 // SEO : données structurées schema.org/Product (prix + disponibilité) en JSON-LD
 function fcInjectJsonLd(){
@@ -3428,6 +3472,9 @@ let miniState=null,curMini=null,curItem=null;
 let rtPost=null,postScene=null,postCam=null,postMat=null;
 const GS={brightness:1.5,crtEnabled:true,crtIntensity:0.5,settingsOpen:false,audio:true,vol:0.7,shadows:true};
 const FOUND_KEY='fc_game_found';
+// ── Modèles 3D personnalisables (publiés via dashboard → config.settings.game) ──
+// GAMECFG[slot] = { url, scale?, yOffset?, rot? }. Slots : 'player' (+ à venir : npc/items/props).
+let GAMECFG={}, _appliedModels={}, _playerProc=null, _playerCustom=null;
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -3594,6 +3641,37 @@ function buildPlayer(){
   });
   g.traverse(function(o){if(o.isMesh)o.castShadow=true;});
   return g;
+}
+
+/* ── MODÈLES PERSONNALISÉS (swap visuel, collisions préservées) ── */
+// Charge le modèle d'un slot si configuré, sinon restaure le visuel procédural.
+// Idempotent : ne recharge pas si l'URL + réglages n'ont pas changé. onLoad(obj|null).
+function applySlotModel(key,cfg,onLoad,baseOpts){
+  var url=cfg&&cfg.url;
+  var prev=_appliedModels[key];
+  if(!url){ if(prev){onLoad(null);_appliedModels[key]=null;} return; }
+  var sig=url+'|'+(cfg.scale||'')+'|'+(cfg.yOffset==null?'':cfg.yOffset)+'|'+(cfg.rot==null?'':cfg.rot);
+  if(prev===sig)return;                              // déjà appliqué à l'identique
+  var opts=Object.assign({},baseOpts||{}), bs=(baseOpts&&baseOpts.size)||2.4;
+  if(cfg.scale)opts.size=bs*cfg.scale;
+  if(cfg.yOffset!=null)opts.yOffset=cfg.yOffset;
+  if(cfg.rot!=null)opts.rot=cfg.rot;
+  loadGameModel(url,opts).then(function(obj){onLoad(obj);_appliedModels[key]=sig;})
+    .catch(function(e){console.warn('Modèle jeu ['+key+'] :',(e&&e.message)||e);});
+}
+// Applique tous les modèles publiés. Rejouable (init + chaque ouverture du jeu).
+function applyGameModels(){
+  if(!inited||!player)return;
+  if(!GAMECFG||!Object.keys(GAMECFG).length){       // repli : lit la config globale si déjà chargée
+    try{var c=window.__FC_CFG__;if(c&&c.settings&&c.settings.game)GAMECFG=c.settings.game;}catch(e){}
+  }
+  // JOUEUR — le modèle devient enfant de playerGrp → suit position+rotation, zéro impact collision
+  applySlotModel('player',GAMECFG.player,function(obj){
+    if(!_playerProc)_playerProc=playerGrp.children.slice();   // mémorise le perso procédural
+    if(_playerCustom){playerGrp.remove(_playerCustom);_playerCustom=null;}
+    if(obj){_playerProc.forEach(function(c){c.visible=false;});playerGrp.add(obj);_playerCustom=obj;}
+    else{_playerProc.forEach(function(c){c.visible=true;});}
+  },{size:2.3});
 }
 
 /* ── BÂTIMENTS ── */
@@ -5414,6 +5492,7 @@ function init(){
     new THREE.MeshBasicMaterial({color:0xffd040,transparent:true,opacity:.7,side:THREE.DoubleSide}));
   wpRing.rotation.x=-Math.PI/2;wpRing.visible=false;scene.add(wpRing);
   initDust();initTouchPad();loadProgress();
+  applyGameModels();   // applique les modèles 3D personnalisés publiés (joueur, …)
 
   clock=new THREE.Clock();
   bindInput();
@@ -5939,9 +6018,14 @@ return {
     document.getElementById('gend').classList.remove('on');
     document.body.style.overflow='hidden';
     init();
+    applyGameModels();   // re-applique si la config a changé depuis la dernière ouverture
     document.getElementById('gitems-n').textContent=found+'/10';
     document.getElementById('gminis-n').textContent=minisDone+'/5';
     if(!raf)loop();
+  },
+  applyConfig:function(cfg){           // reçoit la config publiée → modèles 3D du jeu
+    GAMECFG=(cfg&&cfg.settings&&cfg.settings.game)||{};
+    if(inited)applyGameModels();
   },
   start:function(){
     document.getElementById('gintro').classList.add('off');
