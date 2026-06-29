@@ -587,6 +587,19 @@ body.dragging-product .viewer-box{border-color:rgba(192,128,255,.45)}
 .prose{max-width:760px}
 .prose p{color:var(--fg2);line-height:1.8;margin-bottom:1.1rem;font-weight:300}
 .prose h3{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.03em;color:var(--fg);margin:2rem 0 .8rem}
+/* Pages légales (mentions / CGV / confidentialité) */
+.legal-doc h3{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.03em;color:var(--fg);margin:2.2rem 0 .7rem}
+.legal-doc h4{font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan2);margin:1.4rem 0 .5rem}
+.legal-doc p,.legal-doc li{color:var(--fg2);line-height:1.8;font-weight:300;font-size:.92rem}
+.legal-doc ul{margin:.1rem 0 1.1rem 1.2rem}
+.legal-doc li{margin-bottom:.35rem}
+.legal-doc a{color:var(--cyan2)}
+.legal-doc strong{color:var(--fg);font-weight:500}
+.legal-updated{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--fg3);margin-bottom:1.4rem}
+.legal-toc{display:flex;flex-wrap:wrap;gap:.4rem;margin:.2rem 0 1.8rem}
+.legal-toc a{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fg3);border:1px solid var(--b1);border-radius:3px;padding:5px 10px;cursor:pointer;transition:color .18s,border-color .18s}
+.legal-toc a:hover,.legal-toc a.on{color:var(--cyan2);border-color:rgba(0,216,200,.35)}
+.todo{background:rgba(255,32,96,.14);color:var(--pink2);border:1px dashed rgba(255,32,96,.5);border-radius:3px;padding:0 5px;font-family:'DM Mono',monospace;font-size:.82em;font-weight:400}
 .about-lead{font-size:1.05rem;color:var(--fg);line-height:1.8;margin-bottom:1.4rem}
 .about-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.1rem;margin:1.4rem 0}
 .about-card{background:var(--bg3);border:1px solid var(--b2);border-radius:9px;padding:1.2rem 1.3rem}
@@ -841,7 +854,7 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
 
     <footer>
       <div class="footer-logo" id="f-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft — Bretagne, France</div>
     </footer>
   </div>
@@ -895,7 +908,7 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
 
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -951,7 +964,7 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
 
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -1006,7 +1019,7 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -1024,7 +1037,7 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -1044,7 +1057,7 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -1066,7 +1079,7 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
         <p>Envoie-nous ton design, ton pseudo, ou juste une ambiance — on le transforme en objet réel. <a onclick="goto('custom')" style="color:var(--cyan2);cursor:pointer">Demander un devis ↗</a></p>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
   <!-- FAQ -->
@@ -1083,7 +1096,7 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
         <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Le paiement est-il sécurisé ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Oui : paiement géré par Stripe (carte bancaire, Apple Pay, Google Pay, PayPal). Tes coordonnées bancaires ne transitent jamais par notre site.</p></div></div>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
   <!-- CONTACT -->
@@ -1109,7 +1122,155 @@ html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
         </div>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+  </div>
+
+  <!-- MENTIONS LÉGALES -->
+  <div class="page" id="page-legal">
+    <div class="page-hdr"><div class="page-hdr-row"><div class="page-title">Mentions <span>légales</span></div>
+      <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--fg3)">Informations légales</div></div></div>
+    <section class="section">
+      <div class="prose legal-doc">
+        <div class="legal-updated">Dernière mise à jour : 29 juin 2026</div>
+        <div class="legal-toc"><a class="on" onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a></div>
+        <p>Conformément à l'article 6 III de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN), voici les informations relatives à l'éditeur et à l'hébergeur du présent site.</p>
+
+        <h3>Éditeur du site</h3>
+        <p>Le site <strong>FLAMECRAFT</strong> (ci-après « le Site ») est édité par :</p>
+        <ul>
+          <li>Nom / dénomination : <span class="todo">[À COMPLÉTER : nom et prénom, ou raison sociale]</span></li>
+          <li>Statut juridique : <span class="todo">[À COMPLÉTER : ex. Entreprise individuelle — micro-entrepreneur]</span></li>
+          <li>Adresse : <span class="todo">[À COMPLÉTER : adresse du siège / de domiciliation]</span></li>
+          <li>E-mail : <span class="todo">[À COMPLÉTER : e-mail de contact]</span></li>
+          <li>Téléphone : <span class="todo">[À COMPLÉTER : numéro (facultatif mais recommandé)]</span></li>
+          <li>SIRET : <span class="todo">[À COMPLÉTER : n° SIRET dès immatriculation]</span></li>
+          <li>Numéro RCS / Répertoire des Métiers : <span class="todo">[À COMPLÉTER si applicable — artisan = RM]</span></li>
+          <li>N° de TVA intracommunautaire : <span class="todo">[À COMPLÉTER si assujetti — sinon : « TVA non applicable, art. 293 B du CGI »]</span></li>
+          <li>Directeur / responsable de la publication : <span class="todo">[À COMPLÉTER : nom du responsable]</span></li>
+        </ul>
+
+        <h3>Hébergement</h3>
+        <p>Le Site est hébergé par <strong>GitHub Pages</strong> — GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis (<a href="https://github.com" target="_blank" rel="noopener">github.com</a>).</p>
+        <p>Les services applicatifs (paiement, comptes, formulaire de contact) sont opérés via <strong>Cloudflare, Inc.</strong> (101 Townsend Street, San Francisco, CA 94107, États-Unis). Le traitement des paiements est assuré par <strong>Stripe Payments Europe, Ltd.</strong> (1 Grand Canal Street Lower, Grand Canal Dock, Dublin, Irlande).</p>
+
+        <h3>Propriété intellectuelle</h3>
+        <p>L'ensemble des contenus présents sur le Site (textes, visuels, modèles 3D, logos, designs des coques et figurines, code) est la propriété exclusive de l'éditeur, sauf mention contraire. Toute reproduction, représentation, modification ou exploitation, totale ou partielle, sans autorisation écrite préalable, est interdite et constitue une contrefaçon sanctionnée par le Code de la propriété intellectuelle.</p>
+
+        <h3>Responsabilité</h3>
+        <p>L'éditeur s'efforce d'assurer l'exactitude des informations diffusées sur le Site, mais ne saurait être tenu responsable des omissions, inexactitudes ou carences dans la mise à jour, qu'elles soient de son fait ou du fait de tiers partenaires. Les visuels 3D des produits sont indicatifs : chaque pièce étant fabriquée à la main, de légères variations sont normales.</p>
+
+        <h3>Contact</h3>
+        <p>Pour toute question, vous pouvez nous écrire via la page <a onclick="goto('contact')">Contact</a> ou à l'adresse e-mail indiquée ci-dessus.</p>
+      </div>
+    </section>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+  </div>
+
+  <!-- CGV -->
+  <div class="page" id="page-cgv">
+    <div class="page-hdr"><div class="page-hdr-row"><div class="page-title">Conditions <span>générales de vente</span></div>
+      <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--fg3)">CGV</div></div></div>
+    <section class="section">
+      <div class="prose legal-doc">
+        <div class="legal-updated">Dernière mise à jour : 29 juin 2026</div>
+        <div class="legal-toc"><a onclick="goto('legal')">Mentions légales</a><a class="on" onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a></div>
+
+        <h3>1. Objet et champ d'application</h3>
+        <p>Les présentes Conditions Générales de Vente (CGV) régissent les ventes de coques de briquet, figurines et créations sur-mesure proposées par <strong>FLAMECRAFT</strong> (ci-après « le Vendeur ») à tout acheteur particulier (ci-après « le Client ») via le site. Toute commande implique l'acceptation sans réserve des présentes CGV. Le Vendeur se réserve le droit de les modifier à tout moment ; les CGV applicables sont celles en vigueur à la date de la commande.</p>
+
+        <h3>2. Produits</h3>
+        <p>Les produits sont fabriqués à la main par impression 3D (PLA+, PETG, filament soie, résine UV). Chaque pièce étant unique, de légères variations de teinte, de finition ou d'aspect par rapport aux visuels sont inhérentes au fait main et ne constituent pas un défaut. Les caractéristiques essentielles de chaque produit sont décrites sur sa fiche.</p>
+
+        <h3>3. Prix</h3>
+        <p>Les prix sont indiqués en euros (€), toutes taxes comprises. <span class="todo">[À COMPLÉTER : mention TVA — pour un micro-entrepreneur en franchise : « TVA non applicable, art. 293 B du CGI ».]</span> Les frais de livraison sont indiqués avant la validation de la commande (voir article 6). Le Vendeur se réserve le droit de modifier ses prix à tout moment ; les produits sont facturés sur la base des tarifs en vigueur au moment de la validation de la commande.</p>
+
+        <h3>4. Commande</h3>
+        <p>Le Client sélectionne ses articles, renseigne son adresse de livraison puis valide sa commande après en avoir vérifié le détail. La validation du paiement vaut conclusion du contrat. Un récapitulatif est affiché ; un justificatif est envoyé par e-mail. Le Vendeur peut refuser ou annuler toute commande en cas de litige antérieur, de stock épuisé ou d'erreur manifeste de prix.</p>
+
+        <h3>5. Paiement</h3>
+        <p>Le paiement s'effectue en ligne, au moment de la commande, par carte bancaire, Apple&nbsp;Pay, Google&nbsp;Pay ou PayPal, via le prestataire sécurisé <strong>Stripe</strong>. Les données bancaires sont transmises de façon chiffrée directement à Stripe et ne transitent ni ne sont stockées sur le Site. La commande n'est traitée qu'après confirmation effective du paiement.</p>
+
+        <h3>6. Livraison</h3>
+        <p>Les produits étant fabriqués à la demande, comptez un délai de fabrication de 2 à 5 jours ouvrés, suivi d'un délai d'acheminement de 2 à 4 jours en France métropolitaine. Zones desservies : <span class="todo">[À COMPLÉTER : France / UE / international]</span>. Frais de livraison : <strong>4,90 €</strong>, <strong>offerts dès 50 €</strong> d'achat (après remise éventuelle). Le Client est informé par e-mail à l'expédition. En cas de retard anormal ou de colis perdu, contactez-nous : une solution (renvoi ou remboursement) sera trouvée. Les risques sont transférés au Client à la remise du colis.</p>
+
+        <h3>7. Droit de rétractation</h3>
+        <p>Conformément aux articles L221-18 et suivants du Code de la consommation, le Client dispose d'un délai de <strong>14 jours</strong> à compter de la réception pour exercer son droit de rétractation, sans avoir à justifier de motif, pour les articles standard. Les frais de retour sont à la charge du Client ; le remboursement intervient sous 14 jours après réception du retour (ou preuve d'expédition).</p>
+        <p><strong>Exception légale — articles personnalisés :</strong> conformément à l'article L221-28 3° du Code de la consommation, le droit de rétractation <strong>ne s'applique pas</strong> aux biens confectionnés selon les spécifications du Client ou nettement personnalisés (commandes sur-mesure). Ces articles ne sont ni repris ni échangés, sauf défaut de fabrication.</p>
+        <p>Pour exercer ce droit, adressez votre demande via la page <a onclick="goto('contact')">Contact</a>. Vous pouvez utiliser le formulaire type de rétractation : « <em>À l'attention de FLAMECRAFT — Je vous notifie la rétractation du contrat portant sur la commande n° […], commandée le […] / reçue le […]. Nom, adresse, date.</em> »</p>
+
+        <h3>8. Garanties légales</h3>
+        <p>Tous les produits bénéficient de la <strong>garantie légale de conformité</strong> (art. L217-3 et suivants du Code de la consommation) et de la <strong>garantie contre les vices cachés</strong> (art. 1641 et suivants du Code civil). En cas de produit non conforme ou défectueux, le Client peut obtenir réparation, remplacement ou remboursement sans frais. Contactez-nous avec une photo du défaut.</p>
+
+        <h3>9. Responsabilité</h3>
+        <p>Les produits sont des objets décoratifs / accessoires. Les coques de briquet doivent être utilisées avec discernement, à l'écart des sources de chaleur prolongée. Le Vendeur ne saurait être tenu responsable d'un usage non conforme. Sa responsabilité est limitée au montant de la commande.</p>
+
+        <h3>10. Données personnelles</h3>
+        <p>Le traitement des données du Client est décrit dans notre <a onclick="goto('privacy')">Politique de confidentialité</a>, conforme au RGPD.</p>
+
+        <h3>11. Médiation et règlement des litiges</h3>
+        <p>En cas de litige non résolu à l'amiable, le Client peut recourir gratuitement à un médiateur de la consommation : <span class="todo">[À COMPLÉTER : nom, adresse et site du médiateur auquel le Vendeur adhère]</span>. Le Client peut également utiliser la plateforme européenne de Règlement en Ligne des Litiges : <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">ec.europa.eu/consumers/odr</a>.</p>
+
+        <h3>12. Droit applicable</h3>
+        <p>Les présentes CGV sont soumises au droit français. À défaut de résolution amiable, les tribunaux français sont compétents.</p>
+      </div>
+    </section>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+  </div>
+
+  <!-- POLITIQUE DE CONFIDENTIALITÉ -->
+  <div class="page" id="page-privacy">
+    <div class="page-hdr"><div class="page-hdr-row"><div class="page-title">Politique de <span>confidentialité</span></div>
+      <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--fg3)">RGPD &amp; cookies</div></div></div>
+    <section class="section">
+      <div class="prose legal-doc">
+        <div class="legal-updated">Dernière mise à jour : 29 juin 2026</div>
+        <div class="legal-toc"><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a class="on" onclick="goto('privacy')">Confidentialité</a></div>
+        <p>FLAMECRAFT attache une grande importance à la protection de vos données personnelles. La présente politique explique quelles données sont collectées, pourquoi, et quels sont vos droits, conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi Informatique et Libertés.</p>
+
+        <h3>1. Responsable du traitement</h3>
+        <p>Le responsable du traitement est l'éditeur du Site : <span class="todo">[À COMPLÉTER : nom + e-mail de contact — voir Mentions légales]</span>.</p>
+
+        <h3>2. Données collectées et finalités</h3>
+        <ul>
+          <li><strong>Compte client</strong> (si vous en créez un) : nom, e-mail, mot de passe (stocké chiffré/haché, jamais en clair). Finalité : gérer votre compte, votre panier et l'historique de vos commandes. Base légale : exécution du contrat.</li>
+          <li><strong>Commande &amp; livraison</strong> : nom, adresse postale, e-mail, téléphone. Finalité : traiter et livrer la commande, vous tenir informé. Base légale : exécution du contrat et obligations légales (comptables).</li>
+          <li><strong>Paiement</strong> : traité par Stripe. Nous ne collectons ni ne stockons vos coordonnées bancaires. Base légale : exécution du contrat.</li>
+          <li><strong>Contact / devis</strong> : nom, e-mail, message. Finalité : répondre à votre demande. Base légale : intérêt légitime / mesures précontractuelles.</li>
+          <li><strong>Mesure d'audience</strong> : statistiques de visite anonymisées, déclenchées <strong>uniquement si vous y consentez</strong> via le bandeau cookies. Base légale : consentement.</li>
+        </ul>
+
+        <h3>3. Destinataires et sous-traitants</h3>
+        <p>Vos données ne sont jamais vendues. Elles sont transmises uniquement aux prestataires nécessaires au fonctionnement du Site :</p>
+        <ul>
+          <li><strong>Stripe</strong> — traitement des paiements ;</li>
+          <li><strong>Cloudflare</strong> — hébergement applicatif, comptes et stockage des commandes ;</li>
+          <li><strong>GitHub Pages</strong> — hébergement du site ;</li>
+          <li><strong>Resend</strong> — envoi des e-mails (confirmations, contact) ;</li>
+          <li><strong>Google</strong> — uniquement si vous choisissez « Se connecter avec Google ».</li>
+        </ul>
+
+        <h3>4. Durée de conservation</h3>
+        <p>Les données de compte sont conservées tant que le compte est actif. Les données de commande et de facturation sont conservées pour la durée légale (jusqu'à 10 ans pour les obligations comptables). Les demandes de contact sont conservées le temps nécessaire au traitement. Le consentement à la mesure d'audience est conservé jusqu'à son retrait.</p>
+
+        <h3>5. Transferts hors Union européenne</h3>
+        <p>Certains prestataires (Stripe, Cloudflare, GitHub, Google) sont susceptibles d'héberger des données aux États-Unis. Ces transferts sont encadrés par des garanties appropriées (clauses contractuelles types de la Commission européenne et/ou Data Privacy Framework).</p>
+
+        <h3>6. Vos droits</h3>
+        <p>Vous disposez des droits d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de vos données. Depuis votre <a onclick="goto('account')">compte</a>, vous pouvez supprimer définitivement votre compte et les données associées en un clic. Pour toute autre demande, écrivez-nous via la page <a onclick="goto('contact')">Contact</a>. Vous pouvez aussi introduire une réclamation auprès de la <strong>CNIL</strong> (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>).</p>
+
+        <h3>7. Cookies</h3>
+        <p>Le Site utilise :</p>
+        <ul>
+          <li><strong>Cookies / stockage strictement nécessaires</strong> : session de connexion, panier, sécurité du paiement (Stripe). Ils ne requièrent pas de consentement car indispensables au fonctionnement du Site.</li>
+          <li><strong>Mesure d'audience</strong> : déposée seulement après votre acceptation dans le bandeau cookies. Le refus ne dégrade en rien votre navigation.</li>
+        </ul>
+        <p>Vous pouvez à tout moment revenir sur votre choix : <a onclick="fcOpenCookies()">gérer mes cookies</a>.</p>
+
+        <h3>8. Sécurité</h3>
+        <p>Les mots de passe sont hachés, les communications chiffrées (HTTPS) et l'accès aux données restreint. Malgré nos efforts, aucune transmission sur Internet n'est garantie à 100 % ; nous nous engageons à vous informer en cas d'incident affectant vos données.</p>
+      </div>
+    </section>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="goto('legal')">Mentions légales</a><a onclick="goto('cgv')">CGV</a><a onclick="goto('privacy')">Confidentialité</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
 </div><!-- /main -->
@@ -2582,7 +2743,7 @@ function fcCookieInit(){var s;try{s=localStorage.getItem('fc_consent');}catch(e)
 function fcShowCookieBanner(){
   if(document.getElementById('fc-cookie'))return;
   var d=document.createElement('div');d.id='fc-cookie';
-  d.innerHTML='<div class="fc-cookie-txt">🍪 Ce site utilise des cookies pour le paiement et la connexion, et — si tu acceptes — pour mesurer l\'audience. Le refus ne change rien à ta navigation. <a onclick="goto(\'faq\')">En savoir plus</a></div>'+
+  d.innerHTML='<div class="fc-cookie-txt">🍪 Ce site utilise des cookies pour le paiement et la connexion, et — si tu acceptes — pour mesurer l\'audience. Le refus ne change rien à ta navigation. <a onclick="goto(\'privacy\')">En savoir plus</a></div>'+
     '<div class="fc-cookie-btns"><button class="fc-cookie-no" onclick="fcSetConsent(false)">Refuser</button><button class="fc-cookie-yes" onclick="fcSetConsent(true)">Accepter</button></div>';
   document.body.appendChild(d);requestAnimationFrame(function(){d.classList.add('on');});
 }
