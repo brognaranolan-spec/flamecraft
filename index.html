@@ -53,9 +53,10 @@
 <meta name="twitter:description" content="Coques de briquet et figurines imprimées en 3D, faites main en Bretagne.">
 <meta name="twitter:image" content="https://brognaranolan-spec.github.io/flamecraft/og-image.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" defer></script>
 <script src="https://js.stripe.com/v3/"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Google Identity Services : injecté à la demande (ouverture de la connexion) — voir fcInitGoogle — pour ne pas charger de tiers avant action -->
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -729,6 +730,18 @@ html [data-cs="vignettes"] .card-art-fig{aspect-ratio:.82}
 html [data-cs="vignettes"] .card-body{padding:.5rem .72rem .62rem}
 html [data-cs="vignettes"] .cname{font-size:.84rem;margin-bottom:2px;line-height:1.15}
 html [data-cs="vignettes"] .cprice{font-size:1.15rem}
+/* Bandeau cookies */
+#fc-cookie{position:fixed;left:50%;bottom:0;transform:translate(-50%,115%);width:min(680px,calc(100% - 1.4rem));background:rgba(13,9,32,.97);border:1px solid var(--b1);border-top:2px solid var(--pink);border-radius:12px 12px 0 0;padding:14px 18px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;z-index:1400;box-shadow:0 -12px 44px rgba(0,0,0,.55);transition:transform .35s cubic-bezier(.32,.72,0,1)}
+#fc-cookie.on{transform:translate(-50%,0)}
+.fc-cookie-txt{flex:1;min-width:210px;font-size:.78rem;line-height:1.5;color:var(--fg2)}
+.fc-cookie-txt a{color:var(--cyan2);cursor:pointer;text-decoration:underline}
+.fc-cookie-btns{display:flex;gap:8px}
+.fc-cookie-no,.fc-cookie-yes{font-family:'DM Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:9px 17px;cursor:pointer}
+.fc-cookie-no{background:transparent;color:var(--fg2);border:1px solid var(--b1)}
+.fc-cookie-no:hover{border-color:var(--fg2);color:var(--fg)}
+.fc-cookie-yes{background:var(--pink);color:#fff;border:none}
+.fc-cookie-yes:hover{background:var(--pink2)}
+html.m #fc-cookie{bottom:calc(64px + var(--safe-b,0px))}
 </style>
 </head>
 <body>
@@ -828,7 +841,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
 
     <footer>
       <div class="footer-logo" id="f-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft — Bretagne, France</div>
     </footer>
   </div>
@@ -882,7 +895,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
 
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -938,7 +951,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
 
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -993,7 +1006,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -1011,7 +1024,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -1031,7 +1044,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
     </section>
     <footer>
       <div class="footer-logo">FLAMECRAFT</div>
-      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav>
+      <nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav>
       <div class="footer-copy">© 2026 Flamecraft</div>
     </footer>
   </div>
@@ -1053,7 +1066,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
         <p>Envoie-nous ton design, ton pseudo, ou juste une ambiance — on le transforme en objet réel. <a onclick="goto('custom')" style="color:var(--cyan2);cursor:pointer">Demander un devis ↗</a></p>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
   <!-- FAQ -->
@@ -1070,7 +1083,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
         <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Le paiement est-il sécurisé ?<span class="faq-ico">+</span></button><div class="faq-a"><p>Oui : paiement géré par Stripe (carte bancaire, Apple Pay, Google Pay, PayPal). Tes coordonnées bancaires ne transitent jamais par notre site.</p></div></div>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
   <!-- CONTACT -->
@@ -1096,7 +1109,7 @@ html [data-cs="vignettes"] .cprice{font-size:1.15rem}
         </div>
       </div>
     </section>
-    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
+    <footer><div class="footer-logo">FLAMECRAFT</div><nav class="footer-nav"><a href="#">Instagram</a><a href="#">Etsy</a><a onclick="goto('about')">À propos</a><a onclick="goto('faq')">FAQ</a><a onclick="goto('contact')">Contact</a><a onclick="fcOpenCookies()">Cookies</a></nav><div class="footer-copy">© 2026 Flamecraft</div></footer>
   </div>
 
 </div><!-- /main -->
@@ -2312,7 +2325,10 @@ var _gisReady=false,_gisTries=0;
 function fcInitGoogle(){
   var box=document.getElementById('auth-google'),sep=document.getElementById('auth-sep');
   if(typeof GOOGLE_CLIENT_ID==='undefined'||!GOOGLE_CLIENT_ID||!FC.hasGoogle()){if(box)box.style.display='none';if(sep)sep.style.display='none';return;}
-  if(!window.google||!google.accounts||!google.accounts.id){if(_gisTries++<25)setTimeout(fcInitGoogle,300);return;}
+  if(!window.google||!google.accounts||!google.accounts.id){
+    if(!window._gisInjected){window._gisInjected=true;var gs=document.createElement('script');gs.src='https://accounts.google.com/gsi/client';gs.async=true;gs.defer=true;document.head.appendChild(gs);}
+    if(_gisTries++<40)setTimeout(fcInitGoogle,250);return;
+  }
   if(!_gisReady){try{google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogleCredential});_gisReady=true;}catch(e){return;}}
   box.innerHTML='';
   try{google.accounts.id.renderButton(box,{theme:'filled_black',size:'large',text:'continue_with',shape:'pill',width:320});}catch(e){}
@@ -2553,13 +2569,29 @@ var PAY = (function(){
 // ═══ BACKEND DASHBOARD (config temps réel + analytics) ═══════════════════════
 // Réutilise PAYMENT_API_URL (même Worker Cloudflare). Non configuré → no-op.
 function fcApiBase(){return PAYMENT_API_URL?PAYMENT_API_URL.replace(/\/$/,''):'';}
+function fcConsent(){try{return localStorage.getItem('fc_consent')==='yes';}catch(e){return false;}}
 function fcTrack(event,extra){
-  var base=fcApiBase();if(!base)return;
+  var base=fcApiBase();if(!base||!fcConsent())return;     // mesure d'audience seulement si consentement donné
   try{
     fetch(base+'/track',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(Object.assign({event:event},extra||{})),keepalive:true}).catch(function(){});
   }catch(e){}
 }
+// ── Bandeau cookies (RGPD) : le refus ne coupe que la mesure d'audience ; rien d'autre n'est dégradé ──
+function fcCookieInit(){var s;try{s=localStorage.getItem('fc_consent');}catch(e){}if(s==='yes'||s==='no')return;fcShowCookieBanner();}
+function fcShowCookieBanner(){
+  if(document.getElementById('fc-cookie'))return;
+  var d=document.createElement('div');d.id='fc-cookie';
+  d.innerHTML='<div class="fc-cookie-txt">🍪 Ce site utilise des cookies pour le paiement et la connexion, et — si tu acceptes — pour mesurer l\'audience. Le refus ne change rien à ta navigation. <a onclick="goto(\'faq\')">En savoir plus</a></div>'+
+    '<div class="fc-cookie-btns"><button class="fc-cookie-no" onclick="fcSetConsent(false)">Refuser</button><button class="fc-cookie-yes" onclick="fcSetConsent(true)">Accepter</button></div>';
+  document.body.appendChild(d);requestAnimationFrame(function(){d.classList.add('on');});
+}
+function fcSetConsent(ok){
+  try{localStorage.setItem('fc_consent',ok?'yes':'no');}catch(e){}
+  var d=document.getElementById('fc-cookie');if(d){d.classList.remove('on');setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d);},320);}
+  if(ok)fcTrack('view');                                  // comptabilise la visite courante une fois accepté
+}
+function fcOpenCookies(){try{localStorage.removeItem('fc_consent');}catch(e){}fcShowCookieBanner();}
 function fcSetTxt(id,v){if(v==null||v==='')return;var e=document.getElementById(id);if(e)e.textContent=v;}
 function fcApplyConfig(cfg){
   if(!cfg)return;
@@ -2589,6 +2621,23 @@ function fcApplyConfig(cfg){
   if(c.contactEmail){var cel=document.getElementById('ct-email-link');if(cel){cel.href='mailto:'+c.contactEmail;cel.textContent=c.contactEmail;}var ceb=document.getElementById('ct-email-block');if(ceb)ceb.style.display='';}
   renderAll();
   if(isActive('figurines'))renderFigsPage();
+  fcInjectJsonLd();
+}
+// SEO : données structurées schema.org/Product (prix + disponibilité) en JSON-LD
+function fcInjectJsonLd(){
+  try{
+    var base=location.origin+location.pathname.replace(/index\.html$/,''), ogImg=base+'og-image.png';
+    function prod(p,type){
+      var avail=(typeof p.stock==='number'&&p.stock<=0)?'OutOfStock':'InStock';
+      return {"@context":"https://schema.org/","@type":"Product",name:p.name||'',description:p.desc||'',image:p._img||ogImg,brand:{"@type":"Brand",name:"FLAMECRAFT"},category:(type==='coque'?"Coque de briquet":"Figurine"),offers:{"@type":"Offer",price:String(parseFloat(p.price)||0),priceCurrency:"EUR",availability:"https://schema.org/"+avail,url:base}};
+    }
+    var items=[];
+    COQUES.filter(function(p){return !p.archived&&p.name;}).forEach(function(p){items.push(prod(p,'coque'));});
+    FIGS.filter(function(p){return !p.archived&&p.name;}).forEach(function(p){items.push(prod(p,'fig'));});
+    var el=document.getElementById('fc-ld');
+    if(!el){el=document.createElement('script');el.type='application/ld+json';el.id='fc-ld';document.head.appendChild(el);}
+    el.textContent=JSON.stringify(items);
+  }catch(e){}
 }
 function fcLoadConfig(){
   var base=fcApiBase();if(!base)return;
@@ -2642,6 +2691,7 @@ function submitDevis(ev){
 
 // ═══ INIT ═══
 renderAll();
+fcInjectJsonLd();
 goto('home');
 document.getElementById('btnCart').onclick=function(){goto('cart');};
 document.addEventListener('keydown',function(e){
@@ -2667,6 +2717,7 @@ if(FC_PREVIEW){
 }else{
   fcTrack('view');
   fcLoadConfig();
+  fcCookieInit();
 }
 
 // ── Adaptateur SUPABASE (activé automatiquement si les 2 constantes sont remplies) ──
