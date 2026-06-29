@@ -6050,6 +6050,19 @@ return {
     GAMECFG=(cfg&&cfg.settings&&cfg.settings.game)||{};
     if(inited)applyGameModels();
   },
+  openPreview:function(){              // aperçu dashboard : lance le monde sans intro ni audio
+    this.open();
+    var gi=document.getElementById('gintro');if(gi)gi.classList.add('off');
+    running=true;if(clock)clock.getDelta();
+  },
+  focusSlot:function(key){             // déplace la « caméra » (= le joueur) près d'un slot pour le voir
+    if(!inited||!player)return;
+    var fx=null,fz=null;
+    if(key&&key.indexOf('npc:')===0){var n=npcs[parseInt(key.slice(4),10)];if(n&&n.grp){fx=n.grp.position.x;fz=n.grp.position.z;}}
+    else if(key&&key.indexOf('item:')===0){var pp=key.slice(5).split(':');var c=collectibles.find(function(x){return x.type===pp[0]&&x.pid===parseInt(pp[1],10);});if(c){fx=c.x;fz=c.z;}}
+    else {fx=0;fz=24;}                 // 'player' / défaut → près du spawn
+    if(fx!=null){player.x=fx;player.z=fz+6;player.y=0;player.rot=Math.PI;playerGrp.position.set(player.x,0,player.z);}
+  },
   start:function(){
     document.getElementById('gintro').classList.add('off');
     running=true;clock.getDelta();
@@ -6141,6 +6154,22 @@ return {
   }
 };
 })();
+
+// ── Mode APERÇU JEU (iframe dashboard, ancre #gamepreview) ──────────────────
+// Lance le monde 3D et reçoit les modèles personnalisés en direct par postMessage
+// (avant publication), + focus caméra sur un slot. N'accepte que la même origine.
+if(location.hash.indexOf('gamepreview')>=0){
+  window.addEventListener('message',function(e){
+    if(e.origin!==location.origin)return;
+    var d=e.data||{};
+    if(d.type==='fc-game-cfg'&&d.cfg){try{GAME.applyConfig(d.cfg);}catch(_){}}
+    else if(d.type==='fc-game-focus'){try{GAME.focusSlot(d.key);}catch(_){}}
+  });
+  (function launch(){
+    try{GAME.openPreview();parent.postMessage({type:'fc-game-ready'},'*');}
+    catch(_){setTimeout(launch,200);}   // attend que THREE/GLTFLoader (defer) soient prêts
+  })();
+}
 </script>
 
 </body>
