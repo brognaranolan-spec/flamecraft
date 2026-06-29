@@ -6166,8 +6166,11 @@ if(location.hash.indexOf('gamepreview')>=0){
     else if(d.type==='fc-game-focus'){try{GAME.focusSlot(d.key);}catch(_){}}
   });
   (function launch(){
+    // Three.js est chargé en `defer` → il n'est PAS prêt pendant le parsing. On attend
+    // qu'il le soit avant openPreview, sinon init() jette (et pose inited=true → écran noir).
+    if(typeof THREE==='undefined'||!THREE.WebGLRenderer){setTimeout(launch,120);return;}
     try{GAME.openPreview();parent.postMessage({type:'fc-game-ready'},'*');}
-    catch(_){setTimeout(launch,200);}   // attend que THREE/GLTFLoader (defer) soient prêts
+    catch(_){setTimeout(launch,200);}
   })();
 }
 </script>
