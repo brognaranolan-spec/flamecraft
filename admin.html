@@ -862,7 +862,9 @@ function renderW3Controls(){
         '<span>x '+Math.round(p.x||0)+' · z '+Math.round(p.z||0)+'</span></button>';
     }).join(''):'<div class="muted mono" style="font-size:.6rem">Aucun décor perso. « + Ajouter » pour poser ton propre bâtiment/objet sur la map (avec collision).</div>')+
     '</div></div>';
-  box.innerHTML=listHTML+propHTML+w3EditorHTML()+
+  var blankCard='<div class="card" style="border-color:rgba(160,64,232,.32)"><label class="chk"><input type="checkbox"'+(state.game.blankMap?' checked':'')+' onchange="w3SetBlank(this.checked)"> <b>Map vierge</b> — masquer le décor par défaut</label>'+
+    '<div class="hint" style="margin-top:.5rem">Cache bâtiments &amp; montagnes (visuel ET collisions). Garde le sol, les PNJ, les objets à collecter &amp; les mini-jeux. Compose ensuite ta propre map avec les « Décors &amp; bâtiments » ci-dessous.</div></div>';
+  box.innerHTML=blankCard+listHTML+propHTML+w3EditorHTML()+
     '<input type="file" id="w3-file" accept=".glb,.gltf,.stl,.obj" style="display:none" onchange="w3File(this)">'+
     '<input type="file" id="w3-prop-file" accept=".glb,.gltf,.stl,.obj" style="display:none" onchange="w3PropFile(this)">';
 }
@@ -892,6 +894,7 @@ function w3EditorHTML(){
   '</div>';
 }
 function w3Pick(key){w3sel=key;renderW3Controls();gpFocus(key);}
+function w3SetBlank(v){state.game.blankMap=!!v;markDirty();renderW3Controls();gpPostCfg();}
 function w3Set(field,val){w3Cfg(w3sel)[field]=val;markDirty();renderW3Controls();gpPostCfg();}
 function w3File(input){
   var f=input.files[0];if(!f)return;input.value='';

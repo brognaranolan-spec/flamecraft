@@ -3475,6 +3475,7 @@ const FOUND_KEY='fc_game_found';
 // ── Modèles 3D personnalisables (publiés via dashboard → config.settings.game) ──
 // GAMECFG[slot] = { url, scale?, yOffset?, rot? }. Slots : 'player' (+ à venir : npc/items/props).
 let GAMECFG={}, _appliedModels={}, _playerProc=null, _playerCustom=null, _propObjs={};
+let _decorGroup=null, _decorCols=[], _decorHidden=false;   // map vierge : décor par défaut togglable
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -3690,6 +3691,7 @@ function applyGameModels(){
     },{size:1.7,yOffset:0});
   });
   applyProps();
+  setDecorHidden(!!GAMECFG.blankMap);
 }
 
 /* ── PROPS / BÂTIMENTS PERSO (ajoutés via dashboard, avec empreinte de collision) ── */
@@ -3734,6 +3736,27 @@ function applyProps(){
     else if(rec.mesh){applyPropTransform(rec,pc);}        // simple maj de position/échelle (sans recharger)
   });
   Object.keys(_propObjs).forEach(function(id){if(!seen[id])removeProp(id);});
+}
+
+/* ── MAP VIERGE : capture du décor par défaut → masquable (visuel ET collisions) ── */
+// On enveloppe les builders de décor : pendant leur appel, on redirige scene.add vers un
+// groupe dédié et on note les colliders ajoutés. setDecorHidden(true) cache le groupe et
+// retire ses colliders → terrain libre pour composer sa propre map avec des props.
+function decorCap(fn){
+  if(!_decorGroup){_decorGroup=new THREE.Group();scene.add(_decorGroup);}   // ajout réel (avant override)
+  var realAdd=scene.add, grp=_decorGroup;
+  scene.add=function(o){grp.add(o);return grp;};
+  var c0=colliders.length;
+  try{fn();}finally{scene.add=realAdd;}
+  for(var i=c0;i<colliders.length;i++)_decorCols.push(colliders[i]);
+}
+function setDecorHidden(hide){
+  hide=!!hide;
+  if(_decorGroup)_decorGroup.visible=!hide;
+  if(hide===_decorHidden)return;
+  if(hide)_decorCols.forEach(function(c){var i=colliders.indexOf(c);if(i>=0)colliders.splice(i,1);});
+  else _decorCols.forEach(function(c){if(colliders.indexOf(c)<0)colliders.push(c);});
+  _decorHidden=hide;
 }
 
 /* ── BÂTIMENTS ── */
@@ -5535,10 +5558,11 @@ function init(){
   sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
   scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xc8b8ff,size:1.2,transparent:true,opacity:.7})));
 
-  buildGround();buildMountains();
-  buildAirport();buildMilitary();buildHospital();buildMetro();
-  buildRuins();buildGasStation();buildSkatepark();buildProps();buildNPCs();
-  buildCityLife();buildWindmill();buildOverhaul();buildBuildingDetails();
+  buildGround();
+  decorCap(buildMountains);
+  decorCap(buildAirport);decorCap(buildMilitary);decorCap(buildHospital);decorCap(buildMetro);
+  decorCap(buildRuins);decorCap(buildGasStation);decorCap(buildSkatepark);decorCap(buildProps);buildNPCs();
+  buildCityLife();buildWindmill();decorCap(buildOverhaul);decorCap(buildBuildingDetails);
   buildCollectibles();buildMiniSpots();buildParticles();
 
   playerGrp=buildPlayer();
