@@ -957,8 +957,9 @@ function w3PropEditorHTML(){
       '<select class="f-inp" onchange="w3FootSet(\'shape\',this.value)">'+
         ['none|Aucune (traversable)','box|Boîte','circle|Cercle','mesh|Maillage (précis · murs solides)'].map(function(o){var v=o.split('|');return '<option value="'+v[0]+'"'+((f.shape||'box')===v[0]?' selected':'')+'>'+v[1]+'</option>';}).join('')+
       '</select></div>'+footCtrl+
-    (p.url&&(f.shape||'box')!=='mesh'?'<button class="btn btn-ghost btn-sm" style="margin-top:.6rem" onclick="w3FootFit()">⤢ Ajuster l\'empreinte au modèle</button>':'')+
-    '<div class="hint" style="margin-top:.7rem"><b>Pour ta MAP :</b> mets Collision = <b>Maillage</b> → le perso marche dessus et est bloqué par les murs automatiquement (plus besoin d\'empreinte ; ajuste juste Taille et Hauteur). <b>Pour un objet :</b> l\'empreinte (zone <span style="color:var(--cyan2)">cyan</span> dans l\'aperçu) est indépendante du visuel — « Ajuster au modèle » la cale toute seule, ou « Aucune » = traversable.</div>'+
+    (p.url&&(f.shape||'box')!=='mesh'&&!p.dynamic?'<button class="btn btn-ghost btn-sm" style="margin-top:.6rem" onclick="w3FootFit()">⤢ Ajuster l\'empreinte au modèle</button>':'')+
+    '<label class="chk" style="margin-top:.8rem"><input type="checkbox"'+(p.dynamic?' checked':'')+' onchange="w3PropSet(\'dynamic\',this.checked)"> 🛢️ <b>Objet poussable</b> — bouge quand le perso le percute (façon GTA)</label>'+
+    '<div class="hint" style="margin-top:.7rem"><b>Pour ta MAP :</b> Collision = <b>Maillage</b> → le perso marche dessus et est bloqué par les murs (ajuste juste Taille &amp; Hauteur). <b>Objet fixe :</b> l\'empreinte (zone <span style="color:var(--cyan2)">cyan</span>) le rend solide — « Ajuster au modèle » la cale, « Aucune » = traversable. <b>Objet poussable :</b> coche la case ; la zone <span style="color:var(--pink2)">rose</span> = portée de poussée (règle-la via Collision = Cercle · rayon). Teste-le en jouant !</div>'+
   '</div>';
 }
 function _uploadModel(baseKey,file,oldUrl){

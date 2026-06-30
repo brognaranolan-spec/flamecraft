@@ -3719,20 +3719,42 @@ function rebuildCollMeshes(){
 function setPropCollider(rec,pc){
   if(rec.col){var i=colliders.indexOf(rec.col);if(i>=0)colliders.splice(i,1);rec.col=null;}
   var f=pc.foot;
-  rec.meshColl=!!(f&&f.shape==='mesh');                 // collision réelle au maillage (sol + murs)
-  if(f&&(f.shape==='box'||f.shape==='circle')){
-    rec.col=(f.shape==='circle')?{x:pc.x||0,z:pc.z||0,r:Math.max(.3,f.r||2)}
-                                :{x:pc.x||0,z:pc.z||0,hw:Math.max(.3,f.hw||2),hd:Math.max(.3,f.hd||2)};
-    colliders.push(rec.col);
-  }
-  if(_previewMode){   // aperçu : matérialise l'empreinte boîte/cercle au sol (cyan translucide)
-    if(rec.foot){scene.remove(rec.foot);rec.foot=null;}
+  rec.dynamic=!!pc.dynamic;                             // objet poussable (bouge à la collision)
+  rec.meshColl=(!rec.dynamic)&&!!(f&&f.shape==='mesh'); // collision réelle au maillage (sol + murs)
+  if(rec.dynamic){
+    rec.pushR=(f&&f.shape==='circle'&&f.r)?Math.max(.4,f.r):(f&&f.shape==='box')?Math.max(.4,((f.hw||1.4)+(f.hd||1.4))*.5):1.4;
+    rec.dyn={x:pc.x||0,z:pc.z||0,vx:0,vz:0,spin:0,rot:pc.rot||0};   // état physique (réinit à chaque édition)
+  } else {
+    rec.dyn=null;
     if(f&&(f.shape==='box'||f.shape==='circle')){
-      var g=(f.shape==='circle')?new THREE.RingGeometry(Math.max(.12,(f.r||2)-.12),Math.max(.3,f.r||2),36)
-                                :new THREE.PlaneGeometry(Math.max(.6,(f.hw||2)*2),Math.max(.6,(f.hd||2)*2));
-      var fm=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x00d8c8,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));
-      fm.rotation.x=-Math.PI/2;fm.position.set(pc.x||0,0.06,pc.z||0);scene.add(fm);rec.foot=fm;
+      rec.col=(f.shape==='circle')?{x:pc.x||0,z:pc.z||0,r:Math.max(.3,f.r||2)}
+                                  :{x:pc.x||0,z:pc.z||0,hw:Math.max(.3,f.hw||2),hd:Math.max(.3,f.hd||2)};
+      colliders.push(rec.col);
     }
+  }
+  if(_previewMode){   // aperçu : empreinte boîte/cercle (cyan) ou zone de poussée (rose)
+    if(rec.foot){scene.remove(rec.foot);rec.foot=null;}
+    var gg=null,col=0x00d8c8;
+    if(rec.dynamic){gg=new THREE.RingGeometry(Math.max(.12,rec.pushR-.14),rec.pushR,36);col=0xff5080;}
+    else if(f&&f.shape==='circle')gg=new THREE.RingGeometry(Math.max(.12,(f.r||2)-.12),Math.max(.3,f.r||2),36);
+    else if(f&&f.shape==='box')gg=new THREE.PlaneGeometry(Math.max(.6,(f.hw||2)*2),Math.max(.6,(f.hd||2)*2));
+    if(gg){var fm=new THREE.Mesh(gg,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));fm.rotation.x=-Math.PI/2;fm.position.set(pc.x||0,0.06,pc.z||0);scene.add(fm);rec.foot=fm;}
+  }
+}
+// Objets poussables : repoussés hors du perso, avec élan (glisse) + rotation, amortis. Façon GTA.
+function updateDynamicProps(dt){
+  for(var id in _propObjs){
+    var r=_propObjs[id];if(!r||!r.dynamic||!r.mesh||!r.dyn)continue;
+    var d=r.dyn, dx=d.x-player.x, dz=d.z-player.z, dist=Math.sqrt(dx*dx+dz*dz), contact=0.6+r.pushR;
+    if(dist<contact){
+      if(dist<1e-4){dx=Math.sin(player.rot);dz=Math.cos(player.rot);dist=1;}
+      var nx=dx/dist, nz=dz/dist, pen=contact-dist;
+      d.x=player.x+nx*contact; d.z=player.z+nz*contact;  // sort du contact
+      d.vx+=nx*pen*9; d.vz+=nz*pen*9; d.spin+=pen*3;       // élan + rotation
+    }
+    d.x+=d.vx*dt; d.z+=d.vz*dt; d.vx*=0.86; d.vz*=0.86; d.spin*=0.9;   // friction
+    d.x=Math.max(-W*.74,Math.min(W*.74,d.x)); d.z=Math.max(-W*.74,Math.min(W*.74,d.z));
+    r.mesh.position.x=d.x; r.mesh.position.z=d.z; r.mesh.rotation.y=d.rot+d.spin*.5;
   }
 }
 function applyPropTransform(rec,pc){
@@ -5707,6 +5729,7 @@ function loop(){
       }
       player.y=gnd;vel.y=0;onGround=true;
     }
+    updateDynamicProps(dt);                                // objets poussables réagissent au perso
     playerGrp.position.set(player.x,player.y,player.z);
     playerGrp.rotation.y=player.rot;
     // squash d'atterrissage
