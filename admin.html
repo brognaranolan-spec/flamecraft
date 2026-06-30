@@ -918,6 +918,7 @@ function w3AddProp(){
 }
 function w3PropSet(field,val){var p=w3CurProp();if(!p)return;p[field]=val;markDirty();renderW3Controls();gpPostCfg();if(field==='x'||field==='z')gpFocus(w3sel);}
 function w3FootSet(field,val){var p=w3CurProp();if(!p)return;if(!p.foot)p.foot={shape:'box'};p.foot[field]=val;markDirty();renderW3Controls();gpPostCfg();}
+function w3FootFit(){var p=w3CurProp();if(!p||!p.url){toast('Importe d\'abord un modèle','bad');return;}var f=gpFrame();if(f&&f.contentWindow){f.contentWindow.postMessage({type:'fc-game-measure',id:p.id},'*');toast('Mesure du modèle…');}}
 function w3DelProp(){
   var p=w3CurProp();if(!p)return;
   if(p.url){var k=p.url.split('?')[0].split('/').pop();api('/admin/model/'+encodeURIComponent(k),{method:'DELETE'}).catch(function(){});}
@@ -949,13 +950,14 @@ function w3PropEditorHTML(){
     '<div class="frow2"><div class="frow"><label class="f-lbl">Position X — '+Math.round(p.x||0)+'</label><input type="range" min="-260" max="260" step="2" value="'+(p.x||0)+'" oninput="w3PropSet(\'x\',parseFloat(this.value))"></div>'+
       '<div class="frow"><label class="f-lbl">Position Z — '+Math.round(p.z||0)+'</label><input type="range" min="-260" max="260" step="2" value="'+(p.z||0)+'" oninput="w3PropSet(\'z\',parseFloat(this.value))"></div></div>'+
     rng('Rotation — '+Math.round((p.rot||0)*180/Math.PI)+'°','rot',0,6.28,0.05,(p.rot||0))+
-    rng('Taille — '+(+(p.scale||1)).toFixed(2)+'×','scale',0.3,6,0.05,(p.scale||1))+
-    rng('Hauteur (lift) — '+(+(p.lift||0)).toFixed(1),'lift',-2,12,0.1,(p.lift||0))+
+    rng('Taille — '+(+(p.scale||1)).toFixed(2)+'×  (monte jusqu\'à ×60 pour une map)','scale',0.3,60,0.1,(p.scale||1))+
+    rng('Hauteur — '+(+(p.lift||0)).toFixed(1)+'  (baisse si tu rentres dans le sol)','lift',-15,30,0.2,(p.lift||0))+
     '<div class="frow" style="margin-top:.8rem"><label class="f-lbl">Collision (empreinte au sol)</label>'+
       '<select class="f-inp" onchange="w3FootSet(\'shape\',this.value)">'+
         ['none|Aucune (traversable)','box|Boîte','circle|Cercle'].map(function(o){var v=o.split('|');return '<option value="'+v[0]+'"'+((f.shape||'box')===v[0]?' selected':'')+'>'+v[1]+'</option>';}).join('')+
       '</select></div>'+footCtrl+
-    '<div class="hint" style="margin-top:.7rem">Place ton bâtiment/objet (X/Z), ajuste taille &amp; hauteur, puis définis l\'<b>empreinte de collision</b> (boîte/cercle) pour qu\'on ne le traverse pas. « Aucune » = décor traversable. Rendu en direct à droite.</div>'+
+    (p.url?'<button class="btn btn-ghost btn-sm" style="margin-top:.6rem" onclick="w3FootFit()">⤢ Ajuster l\'empreinte au modèle</button>':'')+
+    '<div class="hint" style="margin-top:.7rem">L\'empreinte (zone <span style="color:var(--cyan2)">cyan</span> visible dans l\'aperçu) est <b>indépendante</b> du visuel : règle-la pour qu\'elle colle au modèle. « Ajuster au modèle » la calcule automatiquement ; « Aucune » = traversable. <b>Map trop petite ?</b> monte la Taille. <b>Tu rentres dans le sol ?</b> baisse la Hauteur jusqu\'à marcher sur la surface.</div>'+
   '</div>';
 }
 function _uploadModel(baseKey,file,oldUrl){
@@ -988,7 +990,11 @@ function gpScale(){
   var fw=1280,fh=760,s=Math.min(1,w.clientWidth/fw);
   f.style.transform='scale('+s+')';w.style.height=Math.round(fh*s)+'px';
 }
-window.addEventListener('message',function(e){if(e.origin===location.origin&&e.data&&e.data.type==='fc-game-ready'){gpReadyFlag=true;gpPostCfg();gpFocus(w3sel);}});
+window.addEventListener('message',function(e){
+  if(e.origin!==location.origin||!e.data)return;
+  if(e.data.type==='fc-game-ready'){gpReadyFlag=true;gpPostCfg();gpFocus(w3sel);}
+  else if(e.data.type==='fc-game-measured'){var p=w3Props().find(function(x){return x.id===e.data.id;});if(p){p.foot={shape:'box',hw:Math.round(e.data.hw*10)/10,hd:Math.round(e.data.hd*10)/10};markDirty();renderW3Controls();gpPostCfg();toast('Empreinte ajustée au modèle','ok');}}
+});
 window.addEventListener('resize',gpScale);
 
 // ═══════════ CODES PROMO ═══════════

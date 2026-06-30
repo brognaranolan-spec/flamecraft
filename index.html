@@ -3476,6 +3476,7 @@ const FOUND_KEY='fc_game_found';
 // GAMECFG[slot] = { url, scale?, yOffset?, rot? }. Slots : 'player' (+ à venir : npc/items/props).
 let GAMECFG={}, _appliedModels={}, _playerProc=null, _playerCustom=null, _propObjs={};
 let _decorGroup=null, _decorCols=[], _decorHidden=false;   // map vierge : décor par défaut togglable
+let _previewMode=false;                                     // aperçu dashboard : affiche les empreintes de collision
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -3699,10 +3700,21 @@ function applyGameModels(){
 // l'empreinte déclarée dans le slot, jamais déduite de la géométrie importée.
 function setPropCollider(rec,pc){
   if(rec.col){var i=colliders.indexOf(rec.col);if(i>=0)colliders.splice(i,1);rec.col=null;}
-  var f=pc.foot;if(!f||!f.shape||f.shape==='none')return;
-  var col=(f.shape==='circle')?{x:pc.x||0,z:pc.z||0,r:Math.max(.3,f.r||2)}
-                              :{x:pc.x||0,z:pc.z||0,hw:Math.max(.3,f.hw||2),hd:Math.max(.3,f.hd||2)};
-  colliders.push(col);rec.col=col;
+  var f=pc.foot;
+  if(f&&f.shape&&f.shape!=='none'){
+    rec.col=(f.shape==='circle')?{x:pc.x||0,z:pc.z||0,r:Math.max(.3,f.r||2)}
+                                :{x:pc.x||0,z:pc.z||0,hw:Math.max(.3,f.hw||2),hd:Math.max(.3,f.hd||2)};
+    colliders.push(rec.col);
+  }
+  if(_previewMode){   // aperçu : matérialise l'empreinte au sol pour la régler à l'œil (cyan translucide)
+    if(rec.foot){scene.remove(rec.foot);rec.foot=null;}
+    if(f&&f.shape&&f.shape!=='none'){
+      var g=(f.shape==='circle')?new THREE.RingGeometry(Math.max(.12,(f.r||2)-.12),Math.max(.3,f.r||2),36)
+                                :new THREE.PlaneGeometry(Math.max(.6,(f.hw||2)*2),Math.max(.6,(f.hd||2)*2));
+      var fm=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x00d8c8,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));
+      fm.rotation.x=-Math.PI/2;fm.position.set(pc.x||0,0.06,pc.z||0);scene.add(fm);rec.foot=fm;
+    }
+  }
 }
 function applyPropTransform(rec,pc){
   var m=rec.mesh;if(!m)return;
@@ -3713,6 +3725,7 @@ function applyPropTransform(rec,pc){
 function removeProp(id){
   var rec=_propObjs[id];if(!rec)return;
   if(rec.mesh)scene.remove(rec.mesh);
+  if(rec.foot)scene.remove(rec.foot);
   if(rec.col){var i=colliders.indexOf(rec.col);if(i>=0)colliders.splice(i,1);}
   delete _propObjs[id];
 }
@@ -6120,9 +6133,15 @@ return {
     if(inited)applyGameModels();
   },
   openPreview:function(){              // aperçu dashboard : lance le monde sans intro ni audio
+    _previewMode=true;
     this.open();
     var gi=document.getElementById('gintro');if(gi)gi.classList.add('off');
     running=true;if(clock)clock.getDelta();
+  },
+  measureProp:function(id){            // mesure l'emprise XZ réelle d'un prop (pour ajuster l'empreinte)
+    var rec=_propObjs[id];if(!rec||!rec.mesh)return null;
+    var s=new THREE.Vector3();new THREE.Box3().setFromObject(rec.mesh).getSize(s);
+    return {hw:Math.max(0.3,s.x/2), hd:Math.max(0.3,s.z/2)};
   },
   focusSlot:function(key){             // déplace la « caméra » (= le joueur) près d'un slot pour le voir
     if(!inited||!player)return;
@@ -6234,6 +6253,7 @@ if(location.hash.indexOf('gamepreview')>=0){
     var d=e.data||{};
     if(d.type==='fc-game-cfg'&&d.cfg){try{GAME.applyConfig(d.cfg);}catch(_){}}
     else if(d.type==='fc-game-focus'){try{GAME.focusSlot(d.key);}catch(_){}}
+    else if(d.type==='fc-game-measure'){try{var r=GAME.measureProp(d.id);if(r)parent.postMessage({type:'fc-game-measured',id:d.id,hw:r.hw,hd:r.hd},'*');}catch(_){}}
   });
   (function launch(){
     // Three.js est chargé en `defer` → il n'est PAS prêt pendant le parsing. On attend
