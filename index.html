@@ -3477,6 +3477,7 @@ const FOUND_KEY='fc_game_found';
 let GAMECFG={}, _appliedModels={}, _playerProc=null, _playerCustom=null, _propObjs={};
 let _decorGroup=null, _decorCols=[], _decorHidden=false;   // map vierge : décor par défaut togglable
 let _previewMode=false;                                     // aperçu dashboard : affiche les empreintes de collision
+let _meshColl=false, _collMeshes=[], _ray=null, _rayO=null, _rayD=null;   // collision réelle au maillage (map)
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -3698,17 +3699,32 @@ function applyGameModels(){
 /* ── PROPS / BÂTIMENTS PERSO (ajoutés via dashboard, avec empreinte de collision) ── */
 // Le visuel (modèle perso) et la collision (footprint XZ) sont indépendants : on pose
 // l'empreinte déclarée dans le slot, jamais déduite de la géométrie importée.
+// Hauteur du sol sous (x,z) par lancer de rayon vers le bas sur les maps « maillage »
+// (la boîte englobante de chaque sous-mesh rejette vite les rayons → peu coûteux).
+function groundAt(x,z){
+  if(!_collMeshes.length)return 0;
+  if(!_ray){_ray=new THREE.Raycaster();_rayO=new THREE.Vector3();_rayD=new THREE.Vector3(0,-1,0);}
+  _rayO.set(x,2000,z);_ray.set(_rayO,_rayD);_ray.far=4000;   // origine haute → couvre n'importe quelle taille de map
+  var hits=_ray.intersectObjects(_collMeshes,true);
+  return hits.length?Math.max(0,hits[0].point.y):0;
+}
+function rebuildCollMeshes(){
+  _collMeshes=[];
+  Object.keys(_propObjs).forEach(function(id){var r=_propObjs[id];if(r&&r.meshColl&&r.mesh)_collMeshes.push(r.mesh);});
+  _meshColl=_collMeshes.length>0;
+}
 function setPropCollider(rec,pc){
   if(rec.col){var i=colliders.indexOf(rec.col);if(i>=0)colliders.splice(i,1);rec.col=null;}
   var f=pc.foot;
-  if(f&&f.shape&&f.shape!=='none'){
+  rec.meshColl=!!(f&&f.shape==='mesh');                 // collision réelle au maillage (sol + murs)
+  if(f&&(f.shape==='box'||f.shape==='circle')){
     rec.col=(f.shape==='circle')?{x:pc.x||0,z:pc.z||0,r:Math.max(.3,f.r||2)}
                                 :{x:pc.x||0,z:pc.z||0,hw:Math.max(.3,f.hw||2),hd:Math.max(.3,f.hd||2)};
     colliders.push(rec.col);
   }
-  if(_previewMode){   // aperçu : matérialise l'empreinte au sol pour la régler à l'œil (cyan translucide)
+  if(_previewMode){   // aperçu : matérialise l'empreinte boîte/cercle au sol (cyan translucide)
     if(rec.foot){scene.remove(rec.foot);rec.foot=null;}
-    if(f&&f.shape&&f.shape!=='none'){
+    if(f&&(f.shape==='box'||f.shape==='circle')){
       var g=(f.shape==='circle')?new THREE.RingGeometry(Math.max(.12,(f.r||2)-.12),Math.max(.3,f.r||2),36)
                                 :new THREE.PlaneGeometry(Math.max(.6,(f.hw||2)*2),Math.max(.6,(f.hd||2)*2));
       var fm=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x00d8c8,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));
@@ -3743,12 +3759,13 @@ function applyProps(){
         if(rec.mesh)scene.remove(rec.mesh);
         rec.base=obj.scale.x||1;
         rec.bottom=new THREE.Box3().setFromObject(obj).min.y;   // bas du modèle à l'échelle de base
-        rec.mesh=obj;scene.add(obj);applyPropTransform(rec,pc);
+        rec.mesh=obj;scene.add(obj);applyPropTransform(rec,pc);rebuildCollMeshes();
       }).catch(function(e){console.warn('Prop '+pc.id+' :',(e&&e.message)||e);});
     } else if(!pc.url&&rec.mesh){scene.remove(rec.mesh);rec.mesh=null;rec.url=null;}
     else if(rec.mesh){applyPropTransform(rec,pc);}        // simple maj de position/échelle (sans recharger)
   });
   Object.keys(_propObjs).forEach(function(id){if(!seen[id])removeProp(id);});
+  rebuildCollMeshes();
 }
 
 /* ── MAP VIERGE : capture du décor par défaut → masquable (visuel ET collisions) ── */
@@ -5664,8 +5681,9 @@ function loop(){
       const dx=Math.sin(a)*spd,dz=Math.cos(a)*spd;
       let nx=player.x+dx,nz=player.z+dz;
       nx=Math.max(-W*.74,Math.min(W*.74,nx));nz=Math.max(-W*.74,Math.min(W*.74,nz));
-      if(!collide(nx,player.z))player.x=nx;
-      if(!collide(player.x,nz))player.z=nz;
+      var gRef=_meshColl?groundAt(player.x,player.z):0;   // marche franchissable ≤1.6, sinon = mur
+      if(!collide(nx,player.z)&&(!_meshColl||groundAt(nx,player.z)-gRef<=1.6))player.x=nx;
+      if(!collide(player.x,nz)&&(!_meshColl||groundAt(player.x,nz)-gRef<=1.6))player.z=nz;
       const targetRot=a;
       let dr=targetRot-player.rot;while(dr>Math.PI)dr-=Math.PI*2;while(dr<-Math.PI)dr+=Math.PI*2;
       player.rot+=dr*Math.min(1,dt*11);
@@ -5677,13 +5695,14 @@ function loop(){
       vel.y=10.5;onGround=false;lastGroundT=-9;
       AUD.blip(420,.14,'square',.08);
     }
+    var gnd=_meshColl?groundAt(player.x,player.z):0;       // sol = surface de la map (maillage) ou plan 0
     vel.y-=30*dt;player.y+=vel.y*dt;
-    if(player.y<=0){
+    if(player.y<=gnd){
       if(!onGround&&vel.y<-6){
-        squashT=1;spawnDust(player.x,.15,player.z,6);
+        squashT=1;spawnDust(player.x,gnd+.15,player.z,6);
         AUD.noise(.1,.1,420);
       }
-      player.y=0;vel.y=0;onGround=true;
+      player.y=gnd;vel.y=0;onGround=true;
     }
     playerGrp.position.set(player.x,player.y,player.z);
     playerGrp.rotation.y=player.rot;
