@@ -55,6 +55,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js" defer></script>
 <script src="https://js.stripe.com/v3/"></script>
 <!-- Google Identity Services : injecté à la demande (ouverture de la connexion) — voir fcInitGoogle — pour ne pas charger de tiers avant action -->
 
@@ -2179,7 +2180,9 @@ function loadGameModel(url,opts){
   if(isGLB){
     return new Promise(function(res,rej){
       if(!THREE.GLTFLoader){rej(new Error('GLTFLoader non chargé'));return;}
-      new THREE.GLTFLoader().load(url,function(gltf){
+      if(!window._fcGL){window._fcGL=new THREE.GLTFLoader();
+        if(THREE.DRACOLoader){var _d=new THREE.DRACOLoader();_d.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');window._fcGL.setDRACOLoader(_d);}}
+      window._fcGL.load(url,function(gltf){
         var root=gltf.scene||(gltf.scenes&&gltf.scenes[0]);
         if(!root){rej(new Error('glTF sans scène'));return;}
         var wrap=frame(root);
