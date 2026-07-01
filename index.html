@@ -3824,7 +3824,7 @@ function applyProps(){
     setPropCollider(rec,pc);                              // collision : maj à chaque fois (peu coûteux)
     if(pc.url&&pc.url!==rec.url){                         // visuel : recharge seulement si l'URL change
       rec.url=pc.url;var capUrl=pc.url;
-      loadGameModel(pc.url,{size:6,yOffset:0,rot:0}).then(function(obj){
+      loadGameModel(pc.url,{size:2.5,yOffset:0,rot:0}).then(function(obj){   // base 2.5u : échelle 1 ≈ taille perso (défaut objet raisonnable)
         if(rec.url!==capUrl)return;                       // changé entre-temps
         if(rec.mesh)scene.remove(rec.mesh);
         rec.base=obj.scale.x||1;
@@ -6236,6 +6236,7 @@ return {
     var gi=document.getElementById('gintro');if(gi)gi.classList.add('off');
     running=true;if(clock)clock.getDelta();
   },
+  _dbg:function(){try{var out={n:scene.children.length,props:[]};Object.keys(_propObjs).forEach(function(id){var r=_propObjs[id],m=r.mesh;var info={id:id,mesh:!!m,vis:m?m.visible:null,pos:m?[Math.round(m.position.x),Math.round(m.position.y),Math.round(m.position.z)]:null,sc:m?+m.scale.x.toFixed(3):null};if(m){var bb=new THREE.Box3().setFromObject(m);info.bbMin=[+bb.min.x.toFixed(1),+bb.min.y.toFixed(1),+bb.min.z.toFixed(1)];info.bbMax=[+bb.max.x.toFixed(1),+bb.max.y.toFixed(1),+bb.max.z.toFixed(1)];var mats=[];m.traverse(function(o){if(o.isMesh&&o.material&&mats.length<2){var mt=o.material;mats.push({type:mt.type,color:mt.color?mt.color.getHexString():null,metal:mt.metalness,rough:mt.roughness,map:!!mt.map,emissive:mt.emissive?mt.emissive.getHexString():null,transp:mt.transparent,opac:mt.opacity,visible:o.visible,frust:o.frustumCulled});}});info.mats=mats;}out.props.push(info);});out.camPos=cam?[Math.round(cam.position.x),Math.round(cam.position.y),Math.round(cam.position.z)]:null;out.playerPos=player?[Math.round(player.x),Math.round(player.y),Math.round(player.z)]:null;return out;}catch(e){return {err:e.message};}},
   measureProp:function(id){            // mesure l'emprise XZ réelle d'un prop (pour ajuster l'empreinte)
     var rec=_propObjs[id];if(!rec||!rec.mesh)return null;
     var s=new THREE.Vector3();new THREE.Box3().setFromObject(rec.mesh).getSize(s);

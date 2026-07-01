@@ -952,7 +952,7 @@ function w3PropEditorHTML(){
     '<div class="frow2"><div class="frow"><label class="f-lbl">Position X — '+Math.round(p.x||0)+'</label><input type="range" min="-260" max="260" step="2" value="'+(p.x||0)+'" oninput="w3PropSet(\'x\',parseFloat(this.value))"></div>'+
       '<div class="frow"><label class="f-lbl">Position Z — '+Math.round(p.z||0)+'</label><input type="range" min="-260" max="260" step="2" value="'+(p.z||0)+'" oninput="w3PropSet(\'z\',parseFloat(this.value))"></div></div>'+
     rng('Rotation — '+Math.round((p.rot||0)*180/Math.PI)+'°','rot',0,6.28,0.05,(p.rot||0))+
-    rng('Taille — '+(+(p.scale||1)).toFixed(2)+'×  (monte jusqu\'à ×60 pour une map)','scale',0.3,60,0.1,(p.scale||1))+
+    rng('Taille — '+(+(p.scale||1)).toFixed(2)+'×  (×1 ≈ un objet, ×10+ un bâtiment, ×40+ une map)','scale',0.3,90,0.1,(p.scale||1))+
     rng('Hauteur — '+(+(p.lift||0)).toFixed(1)+'  (baisse si tu rentres dans le sol)','lift',-15,30,0.2,(p.lift||0))+
     '<div class="frow" style="margin-top:.8rem"><label class="f-lbl">Collision (empreinte au sol)</label>'+
       '<select class="f-inp" onchange="w3FootSet(\'shape\',this.value)">'+
