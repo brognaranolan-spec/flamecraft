@@ -5630,7 +5630,7 @@ function buildParticles(){
 function init(){
   if(inited)return;inited=true;
   const cvs=document.getElementById('game-canvas');
-  rend=new THREE.WebGLRenderer({canvas:cvs,antialias:true});
+  rend=new THREE.WebGLRenderer({canvas:cvs,antialias:true,preserveDrawingBuffer:_previewMode});  // aperçu : buffer lisible (capture via toDataURL)
   rend.setSize(innerWidth,innerHeight);rend.setPixelRatio(Math.min(devicePixelRatio,2));
   rend.shadowMap.enabled=true;rend.shadowMap.type=THREE.PCFSoftShadowMap;
   scene=new THREE.Scene();
