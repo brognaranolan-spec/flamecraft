@@ -3480,7 +3480,8 @@ const FOUND_KEY='fc_game_found';
 let GAMECFG={}, _appliedModels={}, _playerProc=null, _playerCustom=null, _propObjs={};
 let _decorGroup=null, _decorCols=[], _decorHidden=false;   // map vierge : décor par défaut togglable
 let _previewMode=false;                                     // aperçu dashboard : affiche les empreintes de collision
-let _meshColl=false, _collMeshes=[], _ray=null, _rayO=null, _rayD=null;   // collision réelle au maillage (map)
+let _meshColl=false, _collMeshes=[], _ray=null, _rayO=null, _rayD=null;   // collision maillage rapide (heightmap)
+let _solid=false, _solidMeshes=[], _nmat=null;                            // collision 3D solide (ponts/intérieurs/étages)
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -3704,23 +3705,67 @@ function applyGameModels(){
 // l'empreinte déclarée dans le slot, jamais déduite de la géométrie importée.
 // Hauteur du sol sous (x,z) par lancer de rayon vers le bas sur les maps « maillage »
 // (la boîte englobante de chaque sous-mesh rejette vite les rayons → peu coûteux).
-function groundAt(x,z){
+function ensureRay(){if(!_ray){_ray=new THREE.Raycaster();_rayO=new THREE.Vector3();_rayD=new THREE.Vector3();_nmat=new THREE.Matrix3();}}
+function groundAt(x,z){                                     // heightmap : surface la plus haute (rapide)
   if(!_collMeshes.length)return 0;
-  if(!_ray){_ray=new THREE.Raycaster();_rayO=new THREE.Vector3();_rayD=new THREE.Vector3(0,-1,0);}
-  _rayO.set(x,2000,z);_ray.set(_rayO,_rayD);_ray.far=4000;   // origine haute → couvre n'importe quelle taille de map
+  ensureRay();_rayO.set(x,2000,z);_rayD.set(0,-1,0);_ray.set(_rayO,_rayD);_ray.far=4000;
   var hits=_ray.intersectObjects(_collMeshes,true);
   return hits.length?Math.max(0,hits[0].point.y):0;
 }
 function rebuildCollMeshes(){
-  _collMeshes=[];
-  Object.keys(_propObjs).forEach(function(id){var r=_propObjs[id];if(r&&r.meshColl&&r.mesh)_collMeshes.push(r.mesh);});
-  _meshColl=_collMeshes.length>0;
+  _collMeshes=[];_solidMeshes=[];
+  Object.keys(_propObjs).forEach(function(id){var r=_propObjs[id];if(!r||!r.mesh)return;if(r.meshColl)_collMeshes.push(r.mesh);if(r.solid)_solidMeshes.push(r.mesh);});
+  _meshColl=_collMeshes.length>0;_solid=_solidMeshes.length>0;
+}
+/* ── COLLISION 3D SOLIDE (capsule ≈ perso) : sol pris SOUS la tête (→ ponts/étages/intérieurs),
+      murs par rayons horizontaux à plusieurs hauteurs + glissement le long des surfaces. ── */
+var _WALLH=[0.55,1.15,1.65];   // hauteurs des rayons-murs (sous 0.55 = marche franchissable)
+function groundSolid(x,y,z){    // surface juste sous la TÊTE (ignore ce qui est au-dessus)
+  if(!_solidMeshes.length)return 0;
+  ensureRay();_rayO.set(x,y+1.8,z);_rayD.set(0,-1,0);_ray.set(_rayO,_rayD);_ray.far=6000;
+  var h=_ray.intersectObjects(_solidMeshes,true);
+  return h.length?h[0].point.y:0;                          // 0 = sol de base (filet de sécurité)
+}
+function wallHitSolid(x,y,z,dx,dz,maxd){                    // 1er mur (surface non-horizontale) devant, à plusieurs hauteurs
+  ensureRay();var best=null;
+  for(var i=0;i<_WALLH.length;i++){
+    _rayO.set(x,y+_WALLH[i],z);_rayD.set(dx,0,dz);_ray.set(_rayO,_rayD);_ray.far=maxd;
+    var hs=_ray.intersectObjects(_solidMeshes,true);
+    for(var j=0;j<hs.length;j++){
+      var f=hs[j].face;if(!f)continue;
+      _nmat.getNormalMatrix(hs[j].object.matrixWorld);
+      var n=f.normal.clone().applyMatrix3(_nmat);
+      if(Math.abs(n.y)>0.7)continue;                        // ignore sols/plafonds → ne garde que les murs
+      var hn=Math.hypot(n.x,n.z)||1;
+      if(!best||hs[j].distance<best.dist)best={dist:hs[j].distance,nx:n.x/hn,nz:n.z/hn};
+      break;
+    }
+  }
+  return best;
+}
+function slideSolid(x,z,y,mvx,mvz){                         // « collide & slide » : avance et glisse le long des murs
+  for(var it=0;it<4;it++){
+    var len=Math.hypot(mvx,mvz);if(len<1e-5)break;
+    var dx=mvx/len,dz=mvz/len;
+    var hit=wallHitSolid(x,y,z,dx,dz,len+0.5);              // 0.5 = rayon du perso
+    if(!hit||hit.dist>=len+0.5){x+=mvx;z+=mvz;return {x:x,z:z};}
+    var adv=Math.max(0,hit.dist-0.5);x+=dx*adv;z+=dz*adv;
+    var rem=len-adv,rx=dx*rem,rz=dz*rem,dp=rx*hit.nx+rz*hit.nz;
+    mvx=rx-dp*hit.nx;mvz=rz-dp*hit.nz;                      // retire la composante « dans le mur »
+  }
+  return {x:x,z:z};
+}
+function ceilSolid(x,y,z){                                  // plafond au-dessus de la tête ? (anti-saut à travers un étage)
+  if(!_solidMeshes.length)return false;
+  ensureRay();_rayO.set(x,y+1.7,z);_rayD.set(0,1,0);_ray.set(_rayO,_rayD);_ray.far=0.45;
+  return _ray.intersectObjects(_solidMeshes,true).length>0;
 }
 function setPropCollider(rec,pc){
   if(rec.col){var i=colliders.indexOf(rec.col);if(i>=0)colliders.splice(i,1);rec.col=null;}
   var f=pc.foot;
   rec.dynamic=!!pc.dynamic;                             // objet poussable (bouge à la collision)
-  rec.meshColl=(!rec.dynamic)&&!!(f&&f.shape==='mesh'); // collision réelle au maillage (sol + murs)
+  rec.solid=(!rec.dynamic)&&!!(f&&f.shape==='solid');   // collision 3D solide (ponts/intérieurs/étages)
+  rec.meshColl=(!rec.dynamic)&&!!(f&&f.shape==='mesh'); // collision maillage rapide (heightmap sol+murs)
   if(rec.dynamic){
     rec.pushR=(f&&f.shape==='circle'&&f.r)?Math.max(.4,f.r):(f&&f.shape==='box')?Math.max(.4,((f.hw||1.4)+(f.hd||1.4))*.5):1.4;
     rec.dyn={x:pc.x||0,z:pc.z||0,vx:0,vz:0,spin:0,rot:pc.rot||0};   // état physique (réinit à chaque édition)
@@ -5704,11 +5749,18 @@ function loop(){
     if(mx||mz){
       const a=Math.atan2(mx,mz)+camYaw;
       const dx=Math.sin(a)*spd,dz=Math.cos(a)*spd;
-      let nx=player.x+dx,nz=player.z+dz;
-      nx=Math.max(-W*.74,Math.min(W*.74,nx));nz=Math.max(-W*.74,Math.min(W*.74,nz));
-      var gRef=_meshColl?groundAt(player.x,player.z):0;   // marche franchissable ≤1.6, sinon = mur
-      if(!collide(nx,player.z)&&(!_meshColl||groundAt(nx,player.z)-gRef<=1.6))player.x=nx;
-      if(!collide(player.x,nz)&&(!_meshColl||groundAt(player.x,nz)-gRef<=1.6))player.z=nz;
+      if(_solid){                                          // collision 3D solide : glisse le long des murs/objets
+        var rs=slideSolid(player.x,player.z,player.y,dx,dz);
+        var sx=Math.max(-W*.74,Math.min(W*.74,rs.x)), sz=Math.max(-W*.74,Math.min(W*.74,rs.z));
+        if(!collide(sx,player.z))player.x=sx;
+        if(!collide(player.x,sz))player.z=sz;
+      } else {
+        let nx=player.x+dx,nz=player.z+dz;
+        nx=Math.max(-W*.74,Math.min(W*.74,nx));nz=Math.max(-W*.74,Math.min(W*.74,nz));
+        var gRef=_meshColl?groundAt(player.x,player.z):0; // marche franchissable ≤1.6, sinon = mur
+        if(!collide(nx,player.z)&&(!_meshColl||groundAt(nx,player.z)-gRef<=1.6))player.x=nx;
+        if(!collide(player.x,nz)&&(!_meshColl||groundAt(player.x,nz)-gRef<=1.6))player.z=nz;
+      }
       const targetRot=a;
       let dr=targetRot-player.rot;while(dr>Math.PI)dr-=Math.PI*2;while(dr<-Math.PI)dr+=Math.PI*2;
       player.rot+=dr*Math.min(1,dt*11);
@@ -5720,7 +5772,8 @@ function loop(){
       vel.y=10.5;onGround=false;lastGroundT=-9;
       AUD.blip(420,.14,'square',.08);
     }
-    var gnd=_meshColl?groundAt(player.x,player.z):0;       // sol = surface de la map (maillage) ou plan 0
+    var gnd=_solid?groundSolid(player.x,player.y,player.z):(_meshColl?groundAt(player.x,player.z):0);
+    if(_solid&&vel.y>0&&ceilSolid(player.x,player.y,player.z))vel.y=0;   // tête cognée → stoppe la montée
     vel.y-=30*dt;player.y+=vel.y*dt;
     if(player.y<=gnd){
       if(!onGround&&vel.y<-6){
