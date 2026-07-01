@@ -6236,6 +6236,8 @@ return {
     var gi=document.getElementById('gintro');if(gi)gi.classList.add('off');
     running=true;if(clock)clock.getDelta();
   },
+  setCam:function(y,p,d){if(y!=null)camYaw=y;if(p!=null)camPitch=p;if(d!=null)camDist=d;},  // cadrage aperçu/tests
+  playerPos:function(){return player?{x:player.x,y:player.y,z:player.z,rot:player.rot}:null;},
   _dbg:function(){try{var out={n:scene.children.length,props:[]};Object.keys(_propObjs).forEach(function(id){var r=_propObjs[id],m=r.mesh;var info={id:id,mesh:!!m,vis:m?m.visible:null,pos:m?[Math.round(m.position.x),Math.round(m.position.y),Math.round(m.position.z)]:null,sc:m?+m.scale.x.toFixed(3):null};if(m){var bb=new THREE.Box3().setFromObject(m);info.bbMin=[+bb.min.x.toFixed(1),+bb.min.y.toFixed(1),+bb.min.z.toFixed(1)];info.bbMax=[+bb.max.x.toFixed(1),+bb.max.y.toFixed(1),+bb.max.z.toFixed(1)];var mats=[];m.traverse(function(o){if(o.isMesh&&o.material&&mats.length<2){var mt=o.material;mats.push({type:mt.type,color:mt.color?mt.color.getHexString():null,metal:mt.metalness,rough:mt.roughness,map:!!mt.map,emissive:mt.emissive?mt.emissive.getHexString():null,transp:mt.transparent,opac:mt.opacity,visible:o.visible,frust:o.frustumCulled});}});info.mats=mats;}out.props.push(info);});out.camPos=cam?[Math.round(cam.position.x),Math.round(cam.position.y),Math.round(cam.position.z)]:null;out.playerPos=player?[Math.round(player.x),Math.round(player.y),Math.round(player.z)]:null;return out;}catch(e){return {err:e.message};}},
   measureProp:function(id){            // mesure l'emprise XZ réelle d'un prop (pour ajuster l'empreinte)
     var rec=_propObjs[id];if(!rec||!rec.mesh)return null;
