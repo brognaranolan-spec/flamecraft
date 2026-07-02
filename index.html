@@ -3482,6 +3482,7 @@ let _decorGroup=null, _decorCols=[], _decorHidden=false;   // map vierge : déco
 let _previewMode=false;                                     // aperçu dashboard : affiche les empreintes de collision
 let _meshColl=false, _collMeshes=[], _ray=null, _rayO=null, _rayD=null;   // collision maillage rapide (heightmap)
 let _solid=false, _solidMeshes=[], _nmat=null;                            // collision 3D solide (ponts/intérieurs/étages)
+let _slVX=0,_slVZ=0;                                                      // vitesse de glissade (pentes raides)
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -5782,6 +5783,33 @@ function loop(){
       }
       player.y=gnd;vel.y=0;onGround=true;
     }
+    // ── Glissade sur pente raide (maps maillage/solide) : grosse pente = on dérape ──
+    if(_meshColl||_solid){
+      var grounded=player.y<=gnd+0.06;
+      if(grounded){
+        // pente MOYENNE sur une base large (1.8) : un escalier à petites marches lit ~0.25 (marchable),
+        // une vraie pente 45° lit 1.0 (glisse) — évite les faux positifs sur les nez de marche
+        var se=0.9, gq=_solid?function(a,b){return groundSolid(a,player.y,b);}:groundAt;
+        var sgx=(gq(player.x+se,player.z)-gq(player.x-se,player.z))/(2*se);
+        var sgz=(gq(player.x,player.z+se)-gq(player.x,player.z-se))/(2*se);
+        var ss=Math.hypot(sgx,sgz);
+        if(ss>0.75&&ss<6){                                 // ~37°..80° : pente glissante (au-delà = mur/falaise, en deçà = marchable)
+          var sk=Math.min(ss,2.5)*24*dt/ss;
+          _slVX-=sgx*sk;_slVZ-=sgz*sk;                     // accélère vers le bas de la pente
+          walkT+=dt*5;                                     // le perso « s'agite » en dérapant
+        } else {_slVX*=0.84;_slVZ*=0.84;}                  // sol praticable : friction forte
+      } else {_slVX*=0.985;_slVZ*=0.985;}                  // en l'air : l'élan se conserve (envol en bas de pente)
+      var sv=Math.hypot(_slVX,_slVZ);
+      if(sv>17){_slVX*=17/sv;_slVZ*=17/sv;sv=17;}
+      if(sv>0.06){
+        var sx2=Math.max(-W*.74,Math.min(W*.74,player.x+_slVX*dt));
+        var sz2=Math.max(-W*.74,Math.min(W*.74,player.z+_slVZ*dt));
+        if(!collide(sx2,player.z))player.x=sx2;else _slVX=0;
+        if(!collide(player.x,sz2))player.z=sz2;else _slVZ=0;
+        var sg2=_solid?groundSolid(player.x,player.y,player.z):groundAt(player.x,player.z);
+        if(grounded&&sg2<player.y)player.y=Math.max(sg2,player.y-9*dt);  // reste collé au sol en descendant
+      } else {_slVX=0;_slVZ=0;}
+    }
     updateDynamicProps(dt);                                // objets poussables réagissent au perso
     playerGrp.position.set(player.x,player.y,player.z);
     playerGrp.rotation.y=player.rot;
@@ -6238,6 +6266,7 @@ return {
   },
   setCam:function(y,p,d){if(y!=null)camYaw=y;if(p!=null)camPitch=p;if(d!=null)camDist=d;},  // cadrage aperçu/tests
   playerPos:function(){return player?{x:player.x,y:player.y,z:player.z,rot:player.rot}:null;},
+  setPlayerPos:function(x,y,z){if(!player)return;player.x=x;player.y=y||0;player.z=z;vel.y=0;_slVX=0;_slVZ=0;playerGrp.position.set(x,player.y,z);},
   _dbg:function(){try{var out={n:scene.children.length,props:[]};Object.keys(_propObjs).forEach(function(id){var r=_propObjs[id],m=r.mesh;var info={id:id,mesh:!!m,vis:m?m.visible:null,pos:m?[Math.round(m.position.x),Math.round(m.position.y),Math.round(m.position.z)]:null,sc:m?+m.scale.x.toFixed(3):null};if(m){var bb=new THREE.Box3().setFromObject(m);info.bbMin=[+bb.min.x.toFixed(1),+bb.min.y.toFixed(1),+bb.min.z.toFixed(1)];info.bbMax=[+bb.max.x.toFixed(1),+bb.max.y.toFixed(1),+bb.max.z.toFixed(1)];var mats=[];m.traverse(function(o){if(o.isMesh&&o.material&&mats.length<2){var mt=o.material;mats.push({type:mt.type,color:mt.color?mt.color.getHexString():null,metal:mt.metalness,rough:mt.roughness,map:!!mt.map,emissive:mt.emissive?mt.emissive.getHexString():null,transp:mt.transparent,opac:mt.opacity,visible:o.visible,frust:o.frustumCulled});}});info.mats=mats;}out.props.push(info);});out.camPos=cam?[Math.round(cam.position.x),Math.round(cam.position.y),Math.round(cam.position.z)]:null;out.playerPos=player?[Math.round(player.x),Math.round(player.y),Math.round(player.z)]:null;return out;}catch(e){return {err:e.message};}},
   measureProp:function(id){            // mesure l'emprise XZ réelle d'un prop (pour ajuster l'empreinte)
     var rec=_propObjs[id];if(!rec||!rec.mesh)return null;
