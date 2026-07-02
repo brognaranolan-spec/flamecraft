@@ -164,6 +164,22 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .lp-seg{display:inline-flex;border:1px solid var(--b1);border-radius:6px;overflow:hidden}
 .lp-dev{background:transparent;color:var(--fg3);border:none;padding:6px 11px;font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.06em;cursor:pointer}
 .lp-dev.on{background:var(--pink);color:#fff}
+/* ── Clarté Disposition / Monde 3D : sélection unique évidente + pas de sélection de texte ── */
+.lp-model,.lp-tab,.lp-dev,.btn,.nav-it,.f-lbl,.card-h{user-select:none;-webkit-user-select:none}
+.lp-model{cursor:pointer;position:relative}
+.lp-model:hover{border-color:var(--purple2);background:rgba(160,64,232,.08)}
+.lp-model.on{border-color:var(--cyan);background:var(--cyanA);color:var(--fg);box-shadow:inset 0 0 0 1px var(--cyan)}
+.lp-model.on::after{content:'✓';position:absolute;top:5px;right:8px;color:var(--cyan2);font-weight:700;font-size:.78rem}
+.lp-model b{padding-right:14px}
+.w3-has{font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.05em;background:rgba(160,64,232,.14);color:var(--purple2);border:1px solid rgba(160,64,232,.4);border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+.lp-group-note{font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.06em;color:var(--fg3);margin:0 0 .6rem}
+input[type=range]{width:100%;height:20px;accent-color:var(--cyan);cursor:pointer}
+.dis{opacity:.4;pointer-events:none}
+.w3-seg{display:flex;flex-wrap:wrap;gap:6px;margin-top:.4rem}
+.w3-seg button{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.04em;background:transparent;border:1px solid var(--b1);color:var(--fg3);border-radius:5px;padding:7px 10px;cursor:pointer;transition:all .15s;user-select:none}
+.w3-seg button:hover{border-color:var(--purple2);color:var(--fg)}
+.w3-seg button.on{background:var(--cyanA);border-color:var(--cyan);color:var(--cyan2);box-shadow:inset 0 0 0 1px var(--cyan)}
+select:disabled,input:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -736,7 +752,7 @@ function renderControls(){
   function colSel(t){var c=E[t];var opts=[['0','Auto'],['1','1 colonne'],['2','2 colonnes'],['3','3 colonnes'],['4','4 colonnes'],['5','5 colonnes']];return '<select class="f-inp" onchange="te(\''+t+'\',\'cols\',this.value)">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(c.cols||0)===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
   function sizeSel(t){var c=E[t];return '<select class="f-inp" onchange="te(\''+t+'\',\'cardSize\',this.value)">'+[['S','Petites'],['M','Moyennes'],['L','Grandes']].map(function(o){return '<option value="'+o[0]+'"'+(c.cardSize===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
   function styleSel(t){var c=E[t];return '<select class="f-inp" onchange="te(\''+t+'\',\'cardStyle\',this.value)">'+[['standard','Cartes'],['compact','Compact'],['list','Liste'],['vignettes','Vignettes']].map(function(o){return '<option value="'+o[0]+'"'+(c.cardStyle===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
-  function prodSel(t,list){var c=E[t];return '<select class="f-inp" onchange="te(\''+t+'\',\'featId\',this.value)"><option value="">Auto (1er produit)</option>'+list.filter(function(p){return !p.archived;}).map(function(p){return '<option value="'+p.id+'"'+(String(c.featId)===String(p.id)?' selected':'')+'>'+esc(p.name||('#'+p.id))+'</option>';}).join('')+'</select>';}
+  function prodSel(t,list){var c=E[t];return '<select class="f-inp"'+(c.feat?'':' disabled')+' onchange="te(\''+t+'\',\'featId\',this.value)"><option value="">Auto (1er produit)</option>'+list.filter(function(p){return !p.archived;}).map(function(p){return '<option value="'+p.id+'"'+(String(c.featId)===String(p.id)?' selected':'')+'>'+esc(p.name||('#'+p.id))+'</option>';}).join('')+'</select>';}
   function typeCard(t,title,list){var c=E[t];return '<div class="card"><div class="card-h">'+title+'</div>'+
     '<div class="frow2"><div class="frow"><label class="f-lbl">Colonnes</label>'+colSel(t)+'</div>'+
       '<div class="frow"><label class="f-lbl">Taille</label>'+sizeSel(t)+'</div></div>'+
@@ -850,7 +866,7 @@ function renderW3Controls(){
       g.items.map(function(it){
         var has=!!(state.game[it.key]&&state.game[it.key].url);
         return '<button class="lp-model'+(w3sel===it.key?' on':'')+'" onclick="w3Pick(\''+it.key+'\')">'+
-          '<b>'+esc(w3Label(it))+(has?' <span style="color:var(--cyan2)">✓</span>':'')+'</b>'+
+          '<b>'+esc(w3Label(it))+(has?'<span class="w3-has">3D</span>':'')+'</b>'+
           '<span>'+esc(w3Sub(it))+'</span></button>';
       }).join('')+'</div></div>';
   }).join('');
@@ -858,7 +874,7 @@ function renderW3Controls(){
   var propHTML='<div class="card"><div class="card-h">Décors &amp; bâtiments (perso) <button class="btn btn-cyan btn-sm" onclick="w3AddProp()">+ Ajouter</button></div><div class="lp-models">'+
     (props.length?props.map(function(p){
       return '<button class="lp-model'+(w3sel==='prop:'+p.id?' on':'')+'" onclick="w3Pick(\'prop:'+p.id+'\')">'+
-        '<b>'+esc(p.name||'Décor')+(p.url?' <span style="color:var(--cyan2)">✓</span>':'')+'</b>'+
+        '<b>'+esc(p.name||'Décor')+(p.url?'<span class="w3-has">3D</span>':'')+'</b>'+
         '<span>x '+Math.round(p.x||0)+' · z '+Math.round(p.z||0)+'</span></button>';
     }).join(''):'<div class="muted mono" style="font-size:.6rem">Aucun décor perso. « + Ajouter » pour poser ton propre bâtiment/objet sur la map (avec collision).</div>')+
     '</div></div>';
@@ -884,12 +900,15 @@ function w3EditorHTML(){
       (c.url?'<button class="btn btn-ghost btn-sm" style="color:var(--pink2)" onclick="w3Remove()">Retirer</button>':'')+
       '<button class="btn btn-ghost btn-sm" onclick="gpFocus(\''+key+'\')">Recentrer ↗</button>'+
     '</div>'+
+    (c.url?'':'<div class="lp-group-note">Importe d\'abord un modèle — les réglages s\'activeront ensuite.</div>')+
+    '<div class="'+(c.url?'':'dis')+'">'+
     '<div class="frow"><label class="f-lbl">Taille — '+(+sc).toFixed(2)+'×</label>'+
       '<input type="range" min="0.3" max="3" step="0.05" value="'+sc+'" oninput="w3Set(\'scale\',parseFloat(this.value))"></div>'+
     '<div class="frow" style="margin-top:.6rem"><label class="f-lbl">Hauteur — '+(hasYo?(+yo).toFixed(2):'auto (posé au sol)')+'</label>'+
       '<input type="range" min="0" max="3" step="0.05" value="'+yo+'" oninput="w3Set(\'yOffset\',parseFloat(this.value))"></div>'+
     '<div class="frow" style="margin-top:.6rem"><label class="f-lbl">Rotation — '+rotDeg+'°</label>'+
       '<input type="range" min="0" max="360" step="5" value="'+rotDeg+'" oninput="w3Set(\'rot\',parseFloat(this.value)*Math.PI/180)"></div>'+
+    '</div>'+
     '<div class="hint" style="margin-top:.8rem"><b>GLB</b> = couleurs + textures (export Blender). <b>STL/OBJ</b> = une seule teinte. Max 9 Mo. Le modèle est recentré et mis à l\'échelle auto ; affine avec les curseurs. Collisions du jeu inchangées.</div>'+
   '</div>';
 }
@@ -918,6 +937,16 @@ function w3AddProp(){
 }
 function w3PropSet(field,val){var p=w3CurProp();if(!p)return;p[field]=val;markDirty();renderW3Controls();gpPostCfg();if(field==='x'||field==='z')gpFocus(w3sel);}
 function w3FootSet(field,val){var p=w3CurProp();if(!p)return;if(!p.foot)p.foot={shape:'box'};p.foot[field]=val;markDirty();renderW3Controls();gpPostCfg();}
+// Type de collision : choix UNIQUE (fixe l'état dynamic + foot.shape de façon cohérente)
+function w3SetColl(kind){
+  var p=w3CurProp();if(!p)return;
+  if(!p.foot)p.foot={};
+  p.dynamic=(kind==='push');
+  p.foot.shape=(kind==='push')?'circle':kind;
+  if((kind==='circle'||kind==='push')&&p.foot.r==null)p.foot.r=(kind==='push'?1.2:2);
+  if(kind==='box'){if(p.foot.hw==null)p.foot.hw=2;if(p.foot.hd==null)p.foot.hd=2;}
+  markDirty();renderW3Controls();gpPostCfg();
+}
 function w3FootFit(){var p=w3CurProp();if(!p||!p.url){toast('Importe d\'abord un modèle','bad');return;}var f=gpFrame();if(f&&f.contentWindow){f.contentWindow.postMessage({type:'fc-game-measure',id:p.id},'*');toast('Mesure du modèle…');}}
 function w3DelProp(){
   var p=w3CurProp();if(!p)return;
@@ -936,11 +965,14 @@ function w3PropEditorHTML(){
   var f=p.foot||{shape:'box'};
   var status=p.url?('<span style="color:var(--cyan2)">modèle perso ✓</span> <span class="muted mono" style="font-size:.54rem">'+esc(p.url.split('?')[0].split('/').pop())+'</span>'):'<span class="muted">aucun modèle importé</span>';
   function rng(lbl,field,min,max,step,val){return '<div class="frow" style="margin-top:.6rem"><label class="f-lbl">'+lbl+'</label><input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'" oninput="w3PropSet(\''+field+'\',parseFloat(this.value))"></div>';}
+  var kind=p.dynamic?'push':(f.shape||'box');
   var footCtrl='';
-  if((f.shape||'box')==='box')footCtrl='<div class="frow2" style="margin-top:.5rem"><div class="frow"><label class="f-lbl">½ Largeur — '+(+(f.hw||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.hw||2)+'" oninput="w3FootSet(\'hw\',parseFloat(this.value))"></div><div class="frow"><label class="f-lbl">½ Profondeur — '+(+(f.hd||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.hd||2)+'" oninput="w3FootSet(\'hd\',parseFloat(this.value))"></div></div>';
-  else if(f.shape==='circle')footCtrl='<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Rayon — '+(+(f.r||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.r||2)+'" oninput="w3FootSet(\'r\',parseFloat(this.value))"></div>';
-  else if(f.shape==='mesh')footCtrl='<div class="hint" style="margin-top:.5rem;border-color:rgba(255,32,96,.32)">🧱 <b>Maillage (rapide)</b> : le perso marche sur la surface et ne traverse pas les murs — idéal pour une map d\'<b>extérieur à plat</b>. Ne gère PAS les ponts/tunnels/intérieurs/étages (pour ça → « Solide 3D »).</div>';
-  else if(f.shape==='solid')footCtrl='<div class="hint" style="margin-top:.5rem;border-color:rgba(160,64,232,.45)">🏛️ <b>Solide 3D</b> : gère <b>ponts, tunnels, intérieurs et étages</b> (le perso est une capsule testée dans toutes les directions). 🎿 Pentes raides (>35°) = le perso <b>dérape et glisse</b> vers le bas (avec élan). ⚠️ Plus lourd que « Maillage » — à réserver aux maps qui en ont besoin. Aligne le sol de la map sur la hauteur 0.</div>';
+  if(kind==='box')footCtrl='<div class="frow2" style="margin-top:.5rem"><div class="frow"><label class="f-lbl">½ Largeur — '+(+(f.hw||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.hw||2)+'" oninput="w3FootSet(\'hw\',parseFloat(this.value))"></div><div class="frow"><label class="f-lbl">½ Profondeur — '+(+(f.hd||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.hd||2)+'" oninput="w3FootSet(\'hd\',parseFloat(this.value))"></div></div>';
+  else if(kind==='circle')footCtrl='<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Rayon — '+(+(f.r||2)).toFixed(1)+'</label><input type="range" min="0.5" max="20" step="0.5" value="'+(f.r||2)+'" oninput="w3FootSet(\'r\',parseFloat(this.value))"></div>';
+  else if(kind==='push')footCtrl='<div class="frow" style="margin-top:.5rem"><label class="f-lbl">Portée de poussée — '+(+(f.r||1.2)).toFixed(1)+' <span style="color:var(--pink2)">(zone rose dans l\'aperçu)</span></label><input type="range" min="0.5" max="8" step="0.1" value="'+(f.r||1.2)+'" oninput="w3FootSet(\'r\',parseFloat(this.value))"></div><div class="hint" style="margin-top:.5rem;border-color:rgba(255,32,96,.32)">🛢️ <b>Poussable</b> : bouge quand le perso le percute (élan + rotation, façon GTA). Teste-le en jouant !</div>';
+  else if(kind==='mesh')footCtrl='<div class="hint" style="margin-top:.5rem;border-color:rgba(255,32,96,.32)">🧱 <b>Map · Maillage (rapide)</b> : le perso marche sur la surface et ne traverse pas les murs — idéal pour une map d\'<b>extérieur à plat</b>. Ne gère PAS les ponts/tunnels/intérieurs/étages (pour ça → « Map · Solide 3D »).</div>';
+  else if(kind==='solid')footCtrl='<div class="hint" style="margin-top:.5rem;border-color:rgba(160,64,232,.45)">🏛️ <b>Map · Solide 3D</b> : gère <b>ponts, tunnels, intérieurs et étages</b> (le perso est une capsule testée dans toutes les directions). 🎿 Pentes raides (>35°) = le perso <b>dérape et glisse</b> vers le bas (avec élan). ⚠️ Plus lourd que « Maillage » — à réserver aux maps qui en ont besoin. Aligne le sol de la map sur la hauteur 0.</div>';
+  else footCtrl='<div class="lp-group-note" style="margin-top:.5rem">Décor purement visuel — le perso passe au travers.</div>';
   return '<div class="card" style="border-color:rgba(0,216,200,.32)">'+
     '<div class="card-h"><input class="f-inp" style="max-width:170px;font-size:.8rem" value="'+esc(p.name||'')+'" oninput="w3PropSet(\'name\',this.value)" placeholder="Nom du décor"></div>'+
     '<div style="font-size:.74rem;margin:.2rem 0 .7rem">'+status+'</div>'+
@@ -954,13 +986,11 @@ function w3PropEditorHTML(){
     rng('Rotation — '+Math.round((p.rot||0)*180/Math.PI)+'°','rot',0,6.28,0.05,(p.rot||0))+
     rng('Taille — '+(+(p.scale||1)).toFixed(2)+'×  (×1 ≈ un objet, ×10+ un bâtiment, ×40+ une map)','scale',0.3,90,0.1,(p.scale||1))+
     rng('Hauteur — '+(+(p.lift||0)).toFixed(1)+'  (baisse si tu rentres dans le sol)','lift',-15,30,0.2,(p.lift||0))+
-    '<div class="frow" style="margin-top:.8rem"><label class="f-lbl">Collision (empreinte au sol)</label>'+
-      '<select class="f-inp" onchange="w3FootSet(\'shape\',this.value)">'+
-        ['none|Aucune (traversable)','box|Boîte','circle|Cercle','mesh|Maillage (rapide · sol + murs)','solid|Solide 3D (ponts, intérieurs, étages)'].map(function(o){var v=o.split('|');return '<option value="'+v[0]+'"'+((f.shape||'box')===v[0]?' selected':'')+'>'+v[1]+'</option>';}).join('')+
-      '</select></div>'+footCtrl+
-    (p.url&&(f.shape||'box')!=='mesh'&&(f.shape||'box')!=='solid'&&!p.dynamic?'<button class="btn btn-ghost btn-sm" style="margin-top:.6rem" onclick="w3FootFit()">⤢ Ajuster l\'empreinte au modèle</button>':'')+
-    '<label class="chk" style="margin-top:.8rem"><input type="checkbox"'+(p.dynamic?' checked':'')+' onchange="w3PropSet(\'dynamic\',this.checked)"> 🛢️ <b>Objet poussable</b> — bouge quand le perso le percute (façon GTA)</label>'+
-    '<div class="hint" style="margin-top:.7rem"><b>Pour ta MAP :</b> Collision = <b>Maillage</b> → le perso marche dessus et est bloqué par les murs (ajuste juste Taille &amp; Hauteur). <b>Objet fixe :</b> l\'empreinte (zone <span style="color:var(--cyan2)">cyan</span>) le rend solide — « Ajuster au modèle » la cale, « Aucune » = traversable. <b>Objet poussable :</b> coche la case ; la zone <span style="color:var(--pink2)">rose</span> = portée de poussée (règle-la via Collision = Cercle · rayon). Teste-le en jouant !</div>'+
+    '<div class="frow" style="margin-top:.9rem"><label class="f-lbl">Collision — un seul choix possible</label>'+
+      '<div class="w3-seg">'+[['none','🚶 Traversable'],['box','📦 Boîte'],['circle','⭕ Cercle'],['push','🛢️ Poussable'],['mesh','🗺️ Map · Maillage'],['solid','🏛️ Map · Solide 3D']].map(function(o){return '<button class="'+(kind===o[0]?'on':'')+'" onclick="w3SetColl(\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</div></div>'+
+    footCtrl+
+    (p.url&&(kind==='box'||kind==='circle'||kind==='push')?'<button class="btn btn-ghost btn-sm" style="margin-top:.6rem" onclick="w3FootFit()">⤢ Ajuster l\'empreinte au modèle</button>':'')+
+    '<div class="hint" style="margin-top:.7rem"><b>Pour ta MAP :</b> « Map · Maillage » (extérieur plat, léger) ou « Map · Solide 3D » (ponts/intérieurs/étages). <b>Pour un objet :</b> Boîte/Cercle = solide (zone <span style="color:var(--cyan2)">cyan</span> dans l\'aperçu), Poussable = bouge quand on le percute, Traversable = décor pur.</div>'+
   '</div>';
 }
 function _uploadModel(baseKey,file,oldUrl){
@@ -996,7 +1026,12 @@ function gpScale(){
 window.addEventListener('message',function(e){
   if(e.origin!==location.origin||!e.data)return;
   if(e.data.type==='fc-game-ready'){gpReadyFlag=true;gpPostCfg();gpFocus(w3sel);}
-  else if(e.data.type==='fc-game-measured'){var p=w3Props().find(function(x){return x.id===e.data.id;});if(p){p.foot={shape:'box',hw:Math.round(e.data.hw*10)/10,hd:Math.round(e.data.hd*10)/10};markDirty();renderW3Controls();gpPostCfg();toast('Empreinte ajustée au modèle','ok');}}
+  else if(e.data.type==='fc-game-measured'){var p=w3Props().find(function(x){return x.id===e.data.id;});if(p){
+    var mhw=Math.round(e.data.hw*10)/10, mhd=Math.round(e.data.hd*10)/10;
+    if(!p.foot)p.foot={shape:'box'};
+    if(p.dynamic||p.foot.shape==='circle'){p.foot.r=Math.round((mhw+mhd)/2*10)/10;}   // respecte le type choisi
+    else{p.foot.shape='box';p.foot.hw=mhw;p.foot.hd=mhd;}
+    markDirty();renderW3Controls();gpPostCfg();toast('Empreinte ajustée au modèle','ok');}}
 });
 window.addEventListener('resize',gpScale);
 

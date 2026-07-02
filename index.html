@@ -2177,22 +2177,30 @@ function loadGameModel(url,opts){
     return wrap;
   }
   var isGLB=ext==='glb'||ext==='gltf'||/^data:.*(gltf|glb|model\/gltf)/i.test(url);
-  if(isGLB){
-    return new Promise(function(res,rej){
+  // Cache par URL : téléchargé/parsé UNE seule fois, cloné à chaque usage →
+  // les réglages (taille/rotation/hauteur) sont instantanés, sans re-télécharger.
+  // (Géométries/matériaux partagés entre clones ; teinte STL figée au 1er chargement.)
+  if(!window._fcMdlCache)window._fcMdlCache={};
+  var cache=window._fcMdlCache;
+  if(!cache[url]){
+    cache[url]=isGLB?new Promise(function(res,rej){
       if(!THREE.GLTFLoader){rej(new Error('GLTFLoader non chargé'));return;}
       if(!window._fcGL){window._fcGL=new THREE.GLTFLoader();
         if(THREE.DRACOLoader){var _d=new THREE.DRACOLoader();_d.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');window._fcGL.setDRACOLoader(_d);}}
       window._fcGL.load(url,function(gltf){
         var root=gltf.scene||(gltf.scenes&&gltf.scenes[0]);
         if(!root){rej(new Error('glTF sans scène'));return;}
-        var wrap=frame(root);
-        wrap.userData.gltf=gltf;                   // expose les animations éventuelles
-        res(wrap);
+        res({root:root,gltf:gltf});
       },undefined,function(e){rej(e&&e.message?e:new Error('glTF illisible'));});
-    });
+    })
+    :loadCustomModel(url,hex,size).then(function(mesh){return {root:mesh,gltf:null};});   // STL/OBJ (monochrome)
+    cache[url].catch(function(){delete cache[url];});   // échec → on ne garde pas l'entrée
   }
-  // STL / OBJ (monochrome — réutilise le pipeline produits)
-  return loadCustomModel(url,hex,size).then(function(mesh){return frame(mesh);});
+  return cache[url].then(function(p){
+    var wrap=frame(p.root.clone(true));
+    wrap.userData.gltf=p.gltf;                     // expose les animations éventuelles
+    return wrap;
+  });
 }
 
 function v3dLoadSTL(url,name){
@@ -3482,7 +3490,7 @@ let _decorGroup=null, _decorCols=[], _decorHidden=false;   // map vierge : déco
 let _previewMode=false;                                     // aperçu dashboard : affiche les empreintes de collision
 let _meshColl=false, _collMeshes=[], _ray=null, _rayO=null, _rayD=null;   // collision maillage rapide (heightmap)
 let _solid=false, _solidMeshes=[], _nmat=null;                            // collision 3D solide (ponts/intérieurs/étages)
-let _slVX=0,_slVZ=0;                                                      // vitesse de glissade (pentes raides)
+let _slVX=0,_slVZ=0,_slFxT=0;                                             // vitesse de glissade (pentes raides) + throttle des effets
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -5770,8 +5778,10 @@ function loop(){
     // saut (avec coyote time 0.12s)
     if(onGround)lastGroundT=t;
     if(keys.Space&&(onGround||t-lastGroundT<.12)&&vel.y<=0.01){
-      vel.y=10.5;onGround=false;lastGroundT=-9;
-      AUD.blip(420,.14,'square',.08);
+      var slSpd=Math.hypot(_slVX,_slVZ);                   // saut boosté si on dérape vite (tremplin en bas de pente)
+      vel.y=10.5+(slSpd>5?Math.min(4.5,slSpd*0.28):0);
+      onGround=false;lastGroundT=-9;
+      AUD.blip(slSpd>5?520:420,.14,'square',.08);
     }
     var gnd=_solid?groundSolid(player.x,player.y,player.z):(_meshColl?groundAt(player.x,player.z):0);
     if(_solid&&vel.y>0&&ceilSolid(player.x,player.y,player.z))vel.y=0;   // tête cognée → stoppe la montée
@@ -5808,6 +5818,15 @@ function loop(){
         if(!collide(player.x,sz2))player.z=sz2;else _slVZ=0;
         var sg2=_solid?groundSolid(player.x,player.y,player.z):groundAt(player.x,player.z);
         if(grounded&&sg2<player.y)player.y=Math.max(sg2,player.y-9*dt);  // reste collé au sol en descendant
+        // effets de dérapage : traînée de poussière + crissement (throttlés)
+        if(grounded&&sv>4){
+          _slFxT-=dt;
+          if(_slFxT<=0){
+            _slFxT=0.11;
+            spawnDust(player.x-_slVX*0.06,player.y+0.12,player.z-_slVZ*0.06,2);
+            if(sv>7)AUD.noise(.07,.045,260+sv*14);
+          }
+        }
       } else {_slVX=0;_slVZ=0;}
     }
     updateDynamicProps(dt);                                // objets poussables réagissent au perso
