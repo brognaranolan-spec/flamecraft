@@ -52,11 +52,16 @@
 <meta name="twitter:title" content="FLAMECRAFT — Coques de briquet & figurines 3D faites main">
 <meta name="twitter:description" content="Coques de briquet et figurines imprimées en 3D, faites main en Bretagne.">
 <meta name="twitter:image" content="https://brognaranolan-spec.github.io/flamecraft/og-image.png">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Perf : connexions anticipées + polices/Stripe non bloquants (premier affichage plus rapide) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js" defer></script>
-<script src="https://js.stripe.com/v3/"></script>
+<script src="https://js.stripe.com/v3/" async></script>
 <!-- Google Identity Services : injecté à la demande (ouverture de la connexion) — voir fcInitGoogle — pour ne pas charger de tiers avant action -->
 
 <style>
@@ -2760,9 +2765,10 @@ var PAY = (function(){
   }
 
   function checkReturn(){
-    if(!enabled())return;
     var cs=new URLSearchParams(location.search).get('payment_intent_client_secret');
     if(!cs)return;
+    // Stripe.js est chargé en async : au retour d'un paiement par redirection, on attend qu'il soit prêt (max ~8 s)
+    if(!enabled()){checkReturn._n=(checkReturn._n||0)+1;if(checkReturn._n<40)setTimeout(checkReturn,200);return;}
     getStripe().retrievePaymentIntent(cs).then(function(r){
       var pi=r&&r.paymentIntent;
       history.replaceState({},'',location.origin+location.pathname);
@@ -3248,6 +3254,9 @@ function mkFigurineModel(hex){
 .gintro-d b{color:var(--purple2);font-weight:500}
 #gbtn-start{font-family:'DM Mono',monospace;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;background:var(--pink);color:#fff;border:none;padding:15px 38px;border-radius:4px;box-shadow:0 0 28px rgba(255,32,96,.45);transition:all .2s}
 #gbtn-start:hover,.gbtn-end:hover{transform:translateY(-2px);box-shadow:0 0 42px rgba(255,32,96,.7)}
+#gbtn-start:disabled{cursor:default;transform:none;box-shadow:none}
+#gload{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan2);margin-top:1.1rem;animation:gloadp 1.1s ease-in-out infinite}
+@keyframes gloadp{50%{opacity:.4}}
 .gbtn-end{font-family:'DM Mono',monospace;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;background:var(--cyan);color:#04110f;border:none;padding:15px 38px;border-radius:4px;box-shadow:0 0 28px rgba(0,216,200,.45);transition:all .2s}
 .gintro-keys{display:flex;gap:9px;justify-content:center;margin-top:1.6rem;flex-wrap:wrap}
 /* modale item ramassé */
@@ -3491,6 +3500,8 @@ let _previewMode=false;                                     // aperçu dashboard
 let _meshColl=false, _collMeshes=[], _ray=null, _rayO=null, _rayD=null;   // collision maillage rapide (heightmap)
 let _solid=false, _solidMeshes=[], _nmat=null;                            // collision 3D solide (ponts/intérieurs/étages)
 let _slVX=0,_slVZ=0,_slFxT=0;                                             // vitesse de glissade (pentes raides) + throttle des effets
+let _initing=false,_initCbs=[];                                           // construction du monde par étapes (anti-freeze)
+let _pfLast=0,_pfAcc=0,_pfN=0,_pfDone=false;                              // détection FPS → mode performance auto
 
 /* ── PALETTE ── */
 const C={bg:0x080614,pink:0xff2060,cyan:0x00d8c8,purple:0xa040e8,purple2:0xc080ff,fg:0xe8deff};
@@ -3910,7 +3921,8 @@ function neonSign(txt,col,x,y,z,ry,size){
   const m=new THREE.Mesh(new THREE.PlaneGeometry(size||10,(size||10)/4),new THREE.MeshBasicMaterial({map:t,transparent:true,side:THREE.DoubleSide}));
   m.position.set(x,y,z);m.rotation.y=ry||0;scene.add(m);return m;
 }
-function pointLamp(c,i,d,x,y,z){const l=new THREE.PointLight(c,i,d);l.position.set(x,y,z);scene.add(l);return l;}
+let _lamps=[];   // lampes décoratives (le mode performance peut en éteindre une partie)
+function pointLamp(c,i,d,x,y,z){const l=new THREE.PointLight(c,i,d);l.position.set(x,y,z);scene.add(l);_lamps.push(l);return l;}
 
 function buildAirport(){
   const X=-170,Z=-150,conc=darkMat(0x1c1530);
@@ -5636,10 +5648,20 @@ function buildParticles(){
 }
 
 /* ── INIT SCÈNE ── */
-function init(){
-  if(inited)return;inited=true;
+// Écran d'intro : texte de progression + bouton gelé pendant la construction
+function gloadTxt(t){
+  var e=document.getElementById('gload');
+  if(!e){var host=document.getElementById('gintro');if(!host)return;e=document.createElement('div');e.id='gload';host.appendChild(e);}
+  e.textContent=t;e.style.display=t?'':'none';
+  var btn=document.getElementById('gbtn-start');
+  if(btn){btn.disabled=!!t;btn.style.opacity=t?'.35':'';btn.textContent=t?'⏳ Chargement…':'▶ Entrer dans la zone';}
+}
+function init(done){
+  if(inited){if(done)done();return;}
+  if(_initing){if(done)_initCbs.push(done);return;}
+  _initing=true;if(done)_initCbs.push(done);
   const cvs=document.getElementById('game-canvas');
-  rend=new THREE.WebGLRenderer({canvas:cvs,antialias:true,preserveDrawingBuffer:_previewMode});  // aperçu : buffer lisible (capture via toDataURL)
+  rend=new THREE.WebGLRenderer({canvas:cvs,antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:_previewMode});  // high-performance : force le vrai GPU sur les laptops hybrides
   rend.setSize(innerWidth,innerHeight);rend.setPixelRatio(Math.min(devicePixelRatio,2));
   rend.shadowMap.enabled=true;rend.shadowMap.type=THREE.PCFSoftShadowMap;
   scene=new THREE.Scene();
@@ -5650,7 +5672,7 @@ function init(){
   scene.add(new THREE.AmbientLight(0x6a58a8,1.15));
   scene.add(new THREE.HemisphereLight(0x8a70d8,0x261c44,.7));
   const moon=new THREE.DirectionalLight(0x9a80e0,.9);moon.position.set(-120,180,80);
-  moon.castShadow=true;moon.shadow.mapSize.set(2048,2048);
+  moon.castShadow=true;moon.shadow.mapSize.set(1024,1024);   // 1024 suffit à ce style (2048 = 4× plus cher)
   moon.shadow.camera.left=-260;moon.shadow.camera.right=260;moon.shadow.camera.top=260;moon.shadow.camera.bottom=-260;moon.shadow.camera.far=600;
   scene.add(moon);
   const horizonP=pointLamp(C.pink,.7,400,0,30,-W);
@@ -5667,32 +5689,52 @@ function init(){
   sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
   scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xc8b8ff,size:1.2,transparent:true,opacity:.7})));
 
-  buildGround();
-  decorCap(buildMountains);
-  decorCap(buildAirport);decorCap(buildMilitary);decorCap(buildHospital);decorCap(buildMetro);
-  decorCap(buildRuins);decorCap(buildGasStation);decorCap(buildSkatepark);decorCap(buildProps);buildNPCs();
-  buildCityLife();buildWindmill();decorCap(buildOverhaul);decorCap(buildBuildingDetails);
-  buildCollectibles();buildMiniSpots();buildParticles();
-
-  playerGrp=buildPlayer();
-  playerGrp.position.set(0,0,30);
-  scene.add(playerGrp);
-  player={x:0,z:30,y:0,rot:Math.PI};
-  playerLight=new THREE.PointLight(0x66e8ff,.7,15);
-  playerLight.position.set(0,2.6,30);scene.add(playerLight);
-  wpBeam=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,70,8,1,true),
-    new THREE.MeshBasicMaterial({color:0xffd040,transparent:true,opacity:.3,side:THREE.DoubleSide,depthWrite:false}));
-  wpBeam.position.y=35;wpBeam.visible=false;scene.add(wpBeam);
-  wpRing=new THREE.Mesh(new THREE.RingGeometry(.9,1.35,20),
-    new THREE.MeshBasicMaterial({color:0xffd040,transparent:true,opacity:.7,side:THREE.DoubleSide}));
-  wpRing.rotation.x=-Math.PI/2;wpRing.visible=false;scene.add(wpRing);
-  initDust();initTouchPad();loadProgress();
-  applyGameModels();   // applique les modèles 3D personnalisés publiés (joueur, …)
-
-  clock=new THREE.Clock();
-  bindInput();
-  addEventListener('resize',function(){if(!inited)return;rend.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();if(rtPost)rtPost.setSize(innerWidth,innerHeight);});
-  initPost();
+  // Construction du monde par ÉTAPES (une par frame) : la page ne gèle plus, la
+  // progression s'affiche sur l'écran d'intro, et le bouton s'active quand c'est prêt.
+  var steps=[
+    ['Terrain & montagnes',function(){buildGround();decorCap(buildMountains);}],
+    ['Aéroport',function(){decorCap(buildAirport);}],
+    ['Zone militaire & hôpital',function(){decorCap(buildMilitary);decorCap(buildHospital);}],
+    ['Métro & ruines',function(){decorCap(buildMetro);decorCap(buildRuins);}],
+    ['Station & skatepark',function(){decorCap(buildGasStation);decorCap(buildSkatepark);}],
+    ['Vie urbaine',function(){decorCap(buildProps);buildNPCs();buildCityLife();buildWindmill();}],
+    ['Détails & finitions',function(){decorCap(buildOverhaul);decorCap(buildBuildingDetails);}],
+    ['Objets cachés & bornes',function(){buildCollectibles();buildMiniSpots();buildParticles();}],
+    ['Derniers réglages',function(){
+      playerGrp=buildPlayer();
+      playerGrp.position.set(0,0,30);
+      scene.add(playerGrp);
+      player={x:0,z:30,y:0,rot:Math.PI};
+      playerLight=new THREE.PointLight(0x66e8ff,.7,15);
+      playerLight.position.set(0,2.6,30);scene.add(playerLight);
+      wpBeam=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,70,8,1,true),
+        new THREE.MeshBasicMaterial({color:0xffd040,transparent:true,opacity:.3,side:THREE.DoubleSide,depthWrite:false}));
+      wpBeam.position.y=35;wpBeam.visible=false;scene.add(wpBeam);
+      wpRing=new THREE.Mesh(new THREE.RingGeometry(.9,1.35,20),
+        new THREE.MeshBasicMaterial({color:0xffd040,transparent:true,opacity:.7,side:THREE.DoubleSide}));
+      wpRing.rotation.x=-Math.PI/2;wpRing.visible=false;scene.add(wpRing);
+      initDust();initTouchPad();loadProgress();
+      // décor statique : matrices figées → des centaines de recalculs CPU économisés à chaque frame
+      if(_decorGroup){_decorGroup.updateMatrixWorld(true);_decorGroup.traverse(function(o){o.matrixAutoUpdate=false;});}
+      clock=new THREE.Clock();
+      bindInput();
+      addEventListener('resize',function(){if(!inited)return;rend.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();if(rtPost)rtPost.setSize(innerWidth,innerHeight);});
+      initPost();
+    }]
+  ];
+  var si=0;
+  (function stepRun(){
+    if(si<steps.length){
+      gloadTxt('Construction — '+steps[si][0]+' · '+(si+1)+'/'+steps.length);
+      try{steps[si][1]();}catch(e){console.warn('init:',steps[si][0],e);}
+      si++;setTimeout(stepRun,17);   // 17 ms : laisse le navigateur peindre la progression (et marche onglet caché)
+    }else{
+      inited=true;_initing=false;
+      applyGameModels();   // applique les modèles 3D personnalisés publiés (joueur, …)
+      gloadTxt('');
+      var cbs=_initCbs;_initCbs=[];cbs.forEach(function(f){try{f();}catch(_){}});
+    }
+  })();
 }
 
 /* ── INPUT ── */
@@ -5742,9 +5784,24 @@ function collide(nx,nz){
 }
 
 /* ── BOUCLE ── */
+function applyPerfMode(fps){           // FPS trop bas → coupe les 4 plus gros coûts GPU, sans toucher au gameplay
+  GS.shadows=false;if(rend)rend.shadowMap.enabled=false;                        // 1. ombres (2 passes de rendu → 1)
+  GS.crtEnabled=false;GS.brightness=1.0;                                        // 2. post-traitement CRT (passe plein écran)
+  if(rend)rend.setPixelRatio(1);                                                // 3. résolution native ×1 (les DPR 1.5-2 coûtent 2-4× plus de pixels)
+  _lamps.forEach(function(l,i){if(i%2===1)l.visible=false;});                   // 4. 1 lampe décorative sur 2 (le néon émissif reste)
+  scene.traverse(function(o){if(o.isMesh&&o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){m.needsUpdate=true;});}});
+  var b=document.getElementById('gset-shadow-btn');if(b){b.textContent='OFF';b.classList.remove('on');}
+  var c=document.getElementById('gset-crt-btn');if(c){c.textContent='OFF';c.classList.remove('on');}
+  notif('⚡ '+fps+' FPS détectés → mode performance activé (ombres, CRT, résolution). ⚙ Réglages pour les rétablir.');
+}
 function loop(){
   raf=requestAnimationFrame(loop);
   const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
+  // mesure des FPS réels en jeu (2,5 s) → bascule auto en mode performance si ça rame
+  const _n=performance.now();
+  if(_pfLast&&running&&!_pfDone){_pfAcc+=_n-_pfLast;_pfN++;
+    if(_pfAcc>2500&&_pfN>=8){_pfDone=true;const f=Math.round(1000*_pfN/_pfAcc);if(f<32)applyPerfMode(f);}}
+  _pfLast=_n;
   if(running&&!curMini&&!curItem){
     // déplacement relatif caméra
     let mx=0,mz=0;
@@ -5978,7 +6035,7 @@ function loop(){
     }
   }
   /* ── POST-PROCESS RENDER ── */
-  if(rtPost&&postScene){
+  if(rtPost&&postScene&&(GS.crtEnabled||Math.abs(GS.brightness-1)>0.02)){   // CRT off + luminosité normale → rendu direct (économise une passe plein écran)
     rend.setRenderTarget(rtPost);
     rend.render(scene,cam);
     postMat.uniforms.tDiffuse.value=rtPost.texture;
@@ -6262,16 +6319,18 @@ function miniRhythm(){
 
 /* ── API PUBLIQUE ── */
 return {
-  open:function(){
+  open:function(cb){
     document.getElementById('game-overlay').classList.add('on');
     document.getElementById('gintro').classList.remove('off');
     document.getElementById('gend').classList.remove('on');
     document.body.style.overflow='hidden';
-    init();
-    applyGameModels();   // re-applique si la config a changé depuis la dernière ouverture
-    document.getElementById('gitems-n').textContent=found+'/10';
-    document.getElementById('gminis-n').textContent=minisDone+'/5';
-    if(!raf)loop();
+    init(function(){
+      applyGameModels();   // re-applique si la config a changé depuis la dernière ouverture
+      document.getElementById('gitems-n').textContent=found+'/10';
+      document.getElementById('gminis-n').textContent=minisDone+'/5';
+      if(!raf)loop();
+      if(cb)cb();
+    });
   },
   applyConfig:function(cfg){           // reçoit la config publiée → modèles 3D du jeu
     GAMECFG=(cfg&&cfg.settings&&cfg.settings.game)||{};
@@ -6279,10 +6338,13 @@ return {
   },
   openPreview:function(){              // aperçu dashboard : lance le monde sans intro ni audio
     _previewMode=true;
-    this.open();
-    var gi=document.getElementById('gintro');if(gi)gi.classList.add('off');
-    running=true;if(clock)clock.getDelta();
+    this.open(function(){
+      var gi=document.getElementById('gintro');if(gi)gi.classList.add('off');
+      running=true;if(clock)clock.getDelta();
+      try{if(parent!==window)parent.postMessage({type:'fc-game-ready'},'*');}catch(_){}
+    });
   },
+  stats:function(){if(!rend||!scene||!cam)return null;rend.render(scene,cam);var i=rend.info;return {calls:i.render.calls,tris:i.render.triangles,geoms:i.memory.geometries,texs:i.memory.textures,lamps:_lamps.length,shadows:!!rend.shadowMap.enabled,dpr:rend.getPixelRatio()};},  // diagnostic perf (rend une frame de la scène pour mesurer la vraie passe)
   setCam:function(y,p,d){if(y!=null)camYaw=y;if(p!=null)camPitch=p;if(d!=null)camDist=d;},  // cadrage aperçu/tests
   playerPos:function(){return player?{x:player.x,y:player.y,z:player.z,rot:player.rot}:null;},
   setPlayerPos:function(x,y,z){if(!player)return;player.x=x;player.y=y||0;player.z=z;vel.y=0;_slVX=0;_slVZ=0;playerGrp.position.set(x,player.y,z);},
@@ -6302,6 +6364,7 @@ return {
     if(fx!=null){player.x=fx;player.z=fz+6;player.y=0;player.rot=Math.PI;playerGrp.position.set(player.x,0,player.z);}
   },
   start:function(){
+    if(!inited)return;                 // le monde se construit encore (bouton gelé de toute façon)
     document.getElementById('gintro').classList.add('off');
     running=true;clock.getDelta();
     AUD.init();AUD.chord([262,330,392,523],.3,'triangle',.1);
@@ -6408,7 +6471,7 @@ if(location.hash.indexOf('gamepreview')>=0){
     // Three.js est chargé en `defer` → il n'est PAS prêt pendant le parsing. On attend
     // qu'il le soit avant openPreview, sinon init() jette (et pose inited=true → écran noir).
     if(typeof THREE==='undefined'||!THREE.WebGLRenderer){setTimeout(launch,120);return;}
-    try{GAME.openPreview();parent.postMessage({type:'fc-game-ready'},'*');}
+    try{GAME.openPreview();}   // fc-game-ready est posté par openPreview quand le monde est construit
     catch(_){setTimeout(launch,200);}
   })();
 }
